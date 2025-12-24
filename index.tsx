@@ -38,7 +38,7 @@ const CONFIG = {
   dbId: "2d36f36bb31880cbbb70c43247b18de1", 
   // 3. 你的 Cloudflare Worker 自定义域名 (必须以 https:// 开头，以 / 结尾)
   // 例如: "https://api.yourdomain.com/"
-  proxyUrl: "https://cors-anywhere.herokuapp.com/" 
+  proxyUrl: "https://round-wind-51f6.qinyk139.workers.dev/" 
 };
 
 const TEACHER_PASSWORD = "0209";
