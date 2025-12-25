@@ -40,7 +40,7 @@ const CONFIG = {
   dbId: "2d36f36bb31880cbbb70c43247b18de1", 
   // 3. ⚠️ 必须要换成你 Cloudflare 上的真实地址！
   // 这里的中文必须删掉，换成类似 https://xxx.xxx.workers.dev 的链接
-  proxyUrl: "https://你的worker名字.你的子名.workers.dev/" 
+  proxyUrl: "https://round-wind-51f6.qinyk139.workers.dev/" 
 };
 
 const TEACHER_PASSWORD = "0209";
