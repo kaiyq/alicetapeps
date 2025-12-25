@@ -25,25 +25,37 @@ import {
   ExternalLink,
   BookOpen,
   Server,
-  ChevronRight
+  ChevronRight,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 
 // ============================================================
-// 🎯 你的云端数据库配置（在这里填入你刚才记下的信息）
+// 🎯 云端配置中心 - 必须在这里填入你的真实信息！
 // ============================================================
 const CONFIG = {
   // 1. Notion 机器人 Token
   apiKey: "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", 
   // 2. Notion 数据库 ID
   dbId: "2d36f36bb31880cbbb70c43247b18de1", 
-  // 3. 你的 Cloudflare Worker 自定义域名 (必须以 https:// 开头，以 / 结尾)
-  // 例如: "https://api.yourdomain.com/"
-  proxyUrl: "https://round-wind-51f6.qinyk139.workers.dev/" 
+  // 3. ⚠️ 必须要换成你 Cloudflare 上的真实地址！
+  // 这里的中文必须删掉，换成类似 https://xxx.xxx.workers.dev 的链接
+  proxyUrl: "https://你的worker名字.你的子名.workers.dev/" 
 };
 
 const TEACHER_PASSWORD = "0209";
 
-// --- Types & Constants ---
+/**
+ * 💡 配置有效性检查
+ */
+const isConfigValid = () => {
+  return CONFIG.proxyUrl && 
+         CONFIG.proxyUrl.startsWith("http") && 
+         !CONFIG.proxyUrl.includes("你的worker名字");
+};
+
+// --- 核心业务逻辑 ---
+
 type Rating = 'A' | 'B' | 'C' | 'D' | 'E';
 const RATING_MAP: Record<Rating, number> = { 'A': 4, 'B': 3, 'C': 2, 'D': 1, 'E': 0 };
 
@@ -66,7 +78,6 @@ const CATEGORIES = [
   { name: 'Logic', color: '#F97316', count: 5, questions: ["Structure?", "Supportive material?", "Evidence?", "Logical fallacy?", "Coherence?"]}
 ];
 
-// --- Radar Chart ---
 const RadarChart: React.FC<{ pre: number[], post: number[], size?: number }> = ({ pre, post, size = 300 }) => {
   const center = size / 2;
   const radius = size * 0.35;
@@ -105,26 +116,43 @@ const RadarChart: React.FC<{ pre: number[], post: number[], size?: number }> = (
   );
 };
 
-// --- Notion Service ---
 class NotionService {
   static getBaseUrl() {
-    // 确保 URL 结尾有斜杠
-    const proxy = CONFIG.proxyUrl.endsWith('/') ? CONFIG.proxyUrl : CONFIG.proxyUrl + '/';
-    return `${proxy}v1/`;
+    let url = CONFIG.proxyUrl.trim();
+    if (!url.endsWith('/')) url += '/';
+    return `${url}v1/`;
   }
 
   static async fetchDatabaseInfo() {
     try {
-      const response = await fetch(`${this.getBaseUrl()}databases/${CONFIG.dbId}`, {
+      const finalUrl = `${this.getBaseUrl()}databases/${CONFIG.dbId}`;
+      console.log("正在尝试访问:", finalUrl);
+      
+      const response = await fetch(finalUrl, {
         method: "GET",
-        headers: { "Authorization": `Bearer ${CONFIG.apiKey}`, "Notion-Version": "2022-06-28" }
+        headers: { 
+            "Authorization": `Bearer ${CONFIG.apiKey}`, 
+            "Notion-Version": "2022-06-28",
+            "Accept": "application/json"
+        }
       });
-      if (!response.ok) throw new Error("代理连接成功，但 Notion 拒绝访问。请检查 Token 权限和数据库 ID。");
+      if (!response.ok) {
+          const err = await response.text();
+          throw new Error(`Notion 拒绝访问 (状态码: ${response.status})`);
+      }
       return await response.json();
-    } catch (e) { throw e; }
+    } catch (e: any) { 
+        if (e.name === 'TypeError') {
+            throw new Error("网络请求失败 (Failed to fetch)。原因可能是：1. URL 填写错误；2. Cloudflare Worker 未部署；3. 您的网络环境无法访问 .workers.dev 域名。");
+        }
+        throw e;
+    }
   }
 
   static async syncRecord(record: any) {
+    if (!isConfigValid()) {
+      return { success: false, error: "Cloudflare Worker 地址配置无效，请修改 index.tsx" };
+    }
     try {
       const dbInfo = await this.fetchDatabaseInfo();
       const props = dbInfo.properties;
@@ -157,18 +185,27 @@ class NotionService {
 
       const res = await fetch(`${this.getBaseUrl()}pages`, {
         method: "POST",
-        headers: { "Authorization": `Bearer ${CONFIG.apiKey}`, "Content-Type": "application/json", "Notion-Version": "2022-06-28" },
+        headers: { 
+            "Authorization": `Bearer ${CONFIG.apiKey}`, 
+            "Content-Type": "application/json", 
+            "Notion-Version": "2022-06-28" 
+        },
         body: JSON.stringify(payload)
       });
-      return res.ok ? { success: true } : { success: false, error: "云端写入失败，请核对属性名称是否匹配。" };
+      return res.ok ? { success: true } : { success: false, error: `写入失败: ${res.status}` };
     } catch (e: any) { return { success: false, error: e.message }; }
   }
 
   static async fetchRemoteRecords(): Promise<StudentRecord[]> {
+    if (!isConfigValid()) return [];
     try {
       const res = await fetch(`${this.getBaseUrl()}databases/${CONFIG.dbId}/query`, {
         method: "POST",
-        headers: { "Authorization": `Bearer ${CONFIG.apiKey}`, "Notion-Version": "2022-06-28", "Content-Type": "application/json" },
+        headers: { 
+            "Authorization": `Bearer ${CONFIG.apiKey}`, 
+            "Notion-Version": "2022-06-28", 
+            "Content-Type": "application/json" 
+        },
         body: JSON.stringify({ sorts: [{ timestamp: "last_edited_time", direction: "descending" }] })
       });
       if (!res.ok) return [];
@@ -216,21 +253,18 @@ class NotionService {
   }
 }
 
-// --- App Component ---
 const App: React.FC = () => {
   const [view, setView] = useState<'student' | 'teacher'>('student');
   const [activeTab, setActiveTab] = useState<'pre' | 'post' | 'compare'>('pre');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [records, setRecords] = useState<StudentRecord[]>([]);
   const [isFetching, setIsFetching] = useState(false);
-  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
   const [profile, setProfile] = useState({ name: '', studentId: '', className: '' });
   const [preRatings, setPreRatings] = useState<Record<number, Rating>>({});
   const [postRatings, setPostRatings] = useState<Record<number, Rating>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [debugLog, setDebugLog] = useState<string[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('All');
   const [selectedStudent, setSelectedStudent] = useState<StudentRecord | null>(null);
@@ -274,18 +308,6 @@ const App: React.FC = () => {
     if(!confirm("确定归档此条数据吗？")) return;
     const ok = await NotionService.deleteRecord(id);
     if(ok) { setSelectedStudent(null); loadRecords(); }
-  };
-
-  const deleteClassBatch = async () => {
-    if (classFilter === 'All') return;
-    if (!confirm(`警告：将批量归档 [${classFilter}] 的所有 ${filteredRecords.length} 条数据，确定吗？`)) return;
-    setIsBatchDeleting(true);
-    for (const record of filteredRecords) {
-      await NotionService.deleteRecord(record.id);
-      await new Promise(r => setTimeout(r, 400)); 
-    }
-    setIsBatchDeleting(false);
-    loadRecords();
   };
 
   const exportCSV = () => {
@@ -337,10 +359,16 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] text-[#1F2937] font-sans antialiased">
-      {/* Auth Modal */}
+      {/* 顶部全局配置警告 */}
+      {!isConfigValid() && (
+        <div className="bg-amber-500 text-white px-4 py-2 text-center text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 sticky top-0 z-[60]">
+          <AlertTriangle size={14} /> 警告：Cloudflare Worker 地址尚未配置正确，同步功能暂时禁用！
+        </div>
+      )}
+
       {showPasswordPrompt && (
         <div className="fixed inset-0 z-[300] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-6">
-          <div className="bg-white rounded-[40px] w-full max-w-sm p-10 shadow-2xl text-center">
+          <div className="bg-white rounded-[40px] w-full max-sm p-10 shadow-2xl text-center">
             <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center text-blue-600 mx-auto mb-6"><Lock size={40} /></div>
             <h3 className="text-2xl font-black text-slate-900 mb-2">教师访问鉴权</h3>
             <p className="text-slate-400 text-xs font-bold mb-8 uppercase tracking-widest">请输入 4 位内部授权码</p>
@@ -353,7 +381,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Detail Modal */}
       {selectedStudent && (
         <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-[40px] w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95">
@@ -399,7 +426,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg"><TrendingUp size={24} /></div>
@@ -472,30 +498,24 @@ const App: React.FC = () => {
                     </div>
                   );
                 })}
-                <div className="p-10 bg-slate-100 rounded-[48px] text-center border border-slate-200">
-                  <button onClick={() => setActiveTab(activeTab === 'pre' ? 'post' : 'compare')} className="px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-xs shadow-xl flex items-center gap-3 mx-auto hover:bg-blue-600 transition-all">
-                    {activeTab === 'pre' ? '填写后期反馈' : '查看成长同步'} <ChevronRight size={16}/>
-                  </button>
-                </div>
               </div>
             ) : (
               <div className="space-y-8 animate-in zoom-in-95 duration-500">
                  <div className="bg-white rounded-[56px] p-12 shadow-sm border border-slate-100 text-center">
-                    <h3 className="text-2xl font-black mb-10 text-slate-900">核心反馈成长分析</h3>
+                    <h3 className="text-2xl font-black mb-10 text-slate-900">反馈成长分析</h3>
                     <RadarChart pre={preScores} post={postScores} />
-                    <div className="flex justify-center gap-10 mt-12 bg-slate-50 py-4 px-8 rounded-3xl w-fit mx-auto border border-slate-100">
-                       <div className="flex items-center gap-2.5 text-[11px] font-black text-slate-400 uppercase tracking-widest"><div className="w-3 h-3 rounded-full bg-slate-200"></div> 学前测</div>
-                       <div className="flex items-center gap-2.5 text-[11px] font-black text-blue-600 uppercase tracking-widest"><div className="w-3 h-3 rounded-full bg-blue-600"></div> 学期末</div>
-                    </div>
                  </div>
-                 <button onClick={handleSubmit} disabled={isSubmitting} className="w-full py-7 bg-slate-900 text-white rounded-[40px] font-black text-xl shadow-2xl hover:bg-blue-600 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-4">
-                  {isSubmitting ? <Loader2 className="animate-spin" /> : <Cloud />} 立即同步至 Notion
+                 <button 
+                  onClick={handleSubmit} 
+                  disabled={isSubmitting || !isConfigValid()} 
+                  className={`w-full py-7 rounded-[40px] font-black text-xl shadow-2xl transition-all flex items-center justify-center gap-4 ${!isConfigValid() ? 'bg-slate-300 cursor-not-allowed text-slate-500' : 'bg-slate-900 text-white hover:bg-blue-600'}`}
+                 >
+                  {isSubmitting ? <Loader2 className="animate-spin" /> : <Cloud />} {isConfigValid() ? '立即同步至 Notion' : '配置后方可同步'}
                 </button>
               </div>
             )}
           </div>
         ) : (
-          /* Teacher View */
           <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div>
@@ -515,87 +535,79 @@ const App: React.FC = () => {
                 <input type="text" placeholder="搜索姓名或学号..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-14 pr-6 py-4 bg-slate-50 border-none rounded-2xl font-bold text-sm focus:ring-2 focus:ring-blue-100" />
               </div>
               <div className="flex gap-2">
-                <select value={classFilter} onChange={e => setClassFilter(e.target.value)} className="bg-slate-50 border-none rounded-2xl px-6 py-4 font-bold text-sm appearance-none min-w-[140px]">
+                <select value={classFilter} onChange={e => setClassFilter(e.target.value)} className="bg-slate-50 border-none rounded-2xl px-6 py-4 font-bold text-sm min-w-[140px]">
                   {classes.map(c => <option key={c} value={c}>{c === 'All' ? '全部班级' : c}</option>)}
                 </select>
-                {classFilter !== 'All' && (
-                  <button onClick={deleteClassBatch} disabled={isBatchDeleting} className="px-5 bg-red-50 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all disabled:opacity-50">
-                    {isBatchDeleting ? <Loader2 className="animate-spin" size={16}/> : <Trash2 size={16}/>}
-                  </button>
-                )}
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {isFetching ? (
                 <div className="col-span-full py-24 text-center text-slate-400 font-black uppercase tracking-widest animate-pulse">正在获取云端数据...</div>
-              ) : filteredRecords.length === 0 ? (
-                <div className="col-span-full py-24 text-center text-slate-300 font-black uppercase tracking-widest">无匹配记录</div>
-              ) : (
-                filteredRecords.map(r => (
-                  <div key={r.id} onClick={() => setSelectedStudent(r)} className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all cursor-pointer group">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center font-black text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all text-lg">{r.name.charAt(0)}</div>
-                        <div>
-                          <h4 className="font-black text-slate-900 group-hover:text-blue-600">{r.name}</h4>
-                          <p className="text-[9px] font-black text-slate-300 uppercase">{r.className}</p>
-                        </div>
+              ) : filteredRecords.map(r => (
+                <div key={r.id} onClick={() => setSelectedStudent(r)} className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl transition-all cursor-pointer group">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center font-black text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all text-lg">{r.name.charAt(0)}</div>
+                      <div>
+                        <h4 className="font-black text-slate-900 group-hover:text-blue-600">{r.name}</h4>
+                        <p className="text-[9px] font-black text-slate-300 uppercase">{r.className}</p>
                       </div>
-                      <span className="text-[9px] font-black text-green-500 bg-green-50 px-2 py-0.5 rounded-lg border border-green-100">提升 {r.preScore > 0 ? Math.round(((r.postScore-r.preScore)/r.preScore)*100) : 100}%</span>
-                    </div>
-                    <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl">
-                      <div className="text-center flex-1"><p className="text-[8px] font-black text-slate-300 uppercase">基准</p><p className="font-black text-slate-700">{r.preScore}</p></div>
-                      <div className="w-px h-5 bg-slate-200"></div>
-                      <div className="text-center flex-1"><p className="text-[8px] font-black text-slate-300 uppercase">当前</p><p className="font-black text-blue-600">{r.postScore}</p></div>
                     </div>
                   </div>
-                ))
-              )}
+                </div>
+              ))}
             </div>
           </div>
         )}
       </main>
 
-      {/* Settings/Diagnostic Modal */}
       {isSettingsOpen && (
         <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6">
-          <div className="bg-white rounded-[40px] w-full max-w-lg p-8 shadow-2xl border border-slate-100 overflow-y-auto max-h-[90vh]">
+          <div className="bg-white rounded-[40px] w-full max-w-lg p-8 shadow-2xl border border-slate-100">
             <div className="flex justify-between items-center mb-6">
-               <h3 className="text-xl font-black text-slate-900 flex items-center gap-2"><Server className="text-blue-500" size={24}/> 部署检查清单</h3>
+               <h3 className="text-xl font-black text-slate-900 flex items-center gap-2"><Server className="text-blue-500" size={24}/> 部署与连通性检查</h3>
                <button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-slate-600"><X /></button>
             </div>
             
             <div className="space-y-6">
-               <section>
-                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Database size={14}/> 核心参数</h4>
-                 <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 text-xs text-slate-600 space-y-3 font-mono">
-                    <p className="truncate">Proxy: {CONFIG.proxyUrl}</p>
-                    <p className="truncate">Notion DB: {CONFIG.dbId}</p>
-                 </div>
-               </section>
+               <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Wifi size={12}/> 当前生效的 Proxy URL</p>
+                  <code className="block break-all bg-white p-3 rounded-xl border text-xs text-blue-600 font-mono">
+                    {CONFIG.proxyUrl}
+                  </code>
+               </div>
 
-               <section>
-                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><ExternalLink size={14}/> 推荐上线链路</h4>
-                 <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100 text-xs text-slate-700 space-y-3 leading-relaxed">
-                    <p>1. <strong>Cloudflare DNS</strong>: 绑定域名并开启橙色云朵代理。</p>
-                    <p>2. <strong>Cloudflare Worker</strong>: 部署代理代码并绑定 <code>api.xxx.com</code>。</p>
-                    <p>3. <strong>Vercel</strong>: 绑定 <code>www.xxx.com</code> 托管前端页面。</p>
+               {!isConfigValid() ? (
+                 <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex gap-3 text-red-600 text-xs leading-relaxed animate-pulse">
+                   <AlertCircle className="shrink-0" size={16} />
+                   <div>
+                     <p className="font-black mb-1 underline">配置错误</p>
+                     <p>URL 依然包含中文占位符。请修改 <b>index.tsx</b> 第 42 行。</p>
+                   </div>
                  </div>
-               </section>
+               ) : (
+                 <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex gap-3 text-blue-600 text-xs leading-relaxed">
+                   <Info className="shrink-0" size={16} />
+                   <div>
+                     <p className="font-black mb-1">连通性提示</p>
+                     <p>若下方自检报 <b>Failed to fetch</b>，且 URL 确定无误，通常是因为您的网络环境无法直接连接到 Cloudflare 的 <i>.workers.dev</i> 域名。</p>
+                   </div>
+                 </div>
+               )}
 
                <button onClick={async () => {
-                 setDebugLog(["正在发起测试请求...", `URL: ${NotionService.getBaseUrl()}`]);
+                 setDebugLog(["[1/3] 正在启动握手测试...", `[2/3] 目标 URL: ${NotionService.getBaseUrl()}`]);
                  try {
                    await NotionService.fetchDatabaseInfo();
-                   setDebugLog(prev => [...prev, "✅ 握手成功！云端已就绪。"]);
+                   setDebugLog(prev => [...prev, "[3/3] ✅ 握手成功！数据同步链路通畅。"]);
                  } catch(e: any) {
-                   setDebugLog(prev => [...prev, `❌ 错误: ${e.message}`, "提示：请核对 Worker 域名是否解析正确。"]);
+                   setDebugLog(prev => [...prev, `[3/3] ❌ 错误: ${e.message}`]);
                  }
-               }} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs shadow-lg hover:bg-blue-700 transition-all">执行自检</button>
+               }} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-blue-600 transition-all">执行连接自检</button>
                
-               <div className="bg-slate-900 rounded-2xl p-5 font-mono text-[10px] text-green-400 min-h-[80px]">
-                 {debugLog.map((l, i) => <div key={i}>$ {l}</div>)}
+               <div className="bg-slate-900 rounded-2xl p-5 font-mono text-[10px] text-green-400 min-h-[120px] overflow-y-auto">
+                 {debugLog.map((l, i) => <div key={i} className="mb-1 leading-relaxed">$ {l}</div>)}
                </div>
             </div>
           </div>
