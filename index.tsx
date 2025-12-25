@@ -4,25 +4,24 @@ import { createRoot } from 'react-dom/client';
 import { 
   TrendingUp,
   RefreshCw,
-  Cloud,
   Lock,
   Unlock,
   Target,
-  ArrowRight,
-  Sparkles,
+  Search,
   CheckCircle2,
   LayoutDashboard,
   ChevronRight,
   Award,
-  Zap,
   Loader2,
   AlertCircle,
   Database,
-  Send
+  Trash2,
+  User,
+  ExternalLink
 } from 'lucide-react';
 
 // ============================================================
-// 🎯 核心配置 (请确保 Notion 数据库字段与此匹配)
+// 🎯 核心配置
 // ============================================================
 const DEFAULT_CONFIG = {
   apiKey: "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", 
@@ -37,13 +36,6 @@ const TEACHER_PASSWORD = "0209";
 // ============================================================
 type Rating = 'A' | 'B' | 'C' | 'D' | 'E';
 const RATING_MAP: Record<Rating, number> = { 'A': 4, 'B': 3, 'C': 2, 'D': 1, 'E': 0 };
-const SCORE_TO_RATING = (score: number): Rating => {
-  if (score >= 3.5) return 'A';
-  if (score >= 2.5) return 'B';
-  if (score >= 1.5) return 'C';
-  if (score >= 0.5) return 'D';
-  return 'E';
-};
 
 const CATEGORIES = [
   { name: 'Content', color: '#3B82F6', questions: ["Beginning, body and ending included?", "Attention getter?", "Clear opinions?", "Impressive ending?"]},
@@ -81,55 +73,48 @@ const RadarChart: React.FC<{
   const postPoints = getPoints(post);
 
   return (
-    <svg width={size} height={size} className="mx-auto overflow-visible select-none">
+    <svg width={size} height={size} className="mx-auto overflow-visible select-none drop-shadow-lg">
       <defs>
         <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
           <feGaussianBlur stdDeviation="3" result="blur" />
           <feComposite in="SourceGraphic" in2="blur" operator="over" />
         </filter>
       </defs>
-      {/* 坐标圆环 */}
       {[0.25, 0.5, 0.75, 1].map(scale => (
-        <circle key={scale} cx={center} cy={center} r={radius * scale} fill="none" stroke="#E2E8F0" strokeWidth="1" strokeDasharray={scale === 1 ? "" : "4 4"} />
+        <circle key={scale} cx={center} cy={center} r={radius * scale} fill="none" stroke="#F1F5F9" strokeWidth="1" />
       ))}
-      {/* 轴线 */}
       {labels.map((_, i) => {
         const x = center + radius * Math.cos(i * angleStep - Math.PI / 2);
         const y = center + radius * Math.sin(i * angleStep - Math.PI / 2);
-        return <line key={i} x1={center} y1={center} x2={x} y2={y} stroke="#E2E8F0" strokeWidth="1" />;
+        return <line key={i} x1={center} y1={center} x2={x} y2={y} stroke="#F1F5F9" strokeWidth="1" />;
       })}
-      {/* 背景多边形 (Pre) */}
-      <polygon points={prePoints.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#CBD5E1" strokeWidth="2" strokeDasharray="5 3" className="transition-all duration-700" />
-      {/* 前景多边形 (Post) */}
-      <polygon points={postPoints.map(p => `${p.x},${p.y}`).join(' ')} fill="rgba(59, 130, 246, 0.15)" stroke="#3B82F6" strokeWidth="3" strokeLinejoin="round" className="transition-all duration-1000" filter="url(#glow)" />
+      <polygon points={prePoints.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#CBD5E1" strokeWidth="2" strokeDasharray="4 2" className="transition-all duration-700 opacity-60" />
+      <polygon points={postPoints.map(p => `${p.x},${p.y}`).join(' ')} fill="rgba(59, 130, 246, 0.1)" stroke="#3B82F6" strokeWidth="3" strokeLinejoin="round" className="transition-all duration-1000" filter="url(#glow)" />
       
-      {/* 交互维度标签 */}
       {labels.map((label, i) => {
-        const x = center + (radius + 50) * Math.cos(i * angleStep - Math.PI / 2);
-        const y = center + (radius + 50) * Math.sin(i * angleStep - Math.PI / 2);
+        const x = center + (radius + 60) * Math.cos(i * angleStep - Math.PI / 2);
+        const y = center + (radius + 60) * Math.sin(i * angleStep - Math.PI / 2);
         const isActive = activeIdx === i;
         return (
           <g key={i} onClick={() => onSelectCategory(i)} className="cursor-pointer group">
-            <rect x={x - 35} y={y - 15} width="70" height="30" rx="15" fill={isActive ? "#3B82F6" : "transparent"} className="transition-all duration-300" />
-            <text x={x} y={y + 5} textAnchor="middle" className={`text-[12px] font-black transition-all duration-300 ${isActive ? 'fill-white' : 'fill-slate-500 group-hover:fill-blue-600'}`}>{label}</text>
+            <rect x={x - 40} y={y - 15} width="80" height="30" rx="15" fill={isActive ? "#3B82F6" : "white"} className={`transition-all duration-300 shadow-sm ${isActive ? '' : 'stroke-slate-200'}`} />
+            <text x={x} y={y + 5} textAnchor="middle" className={`text-[12px] font-black tracking-tight transition-all duration-300 ${isActive ? 'fill-white' : 'fill-slate-400'}`}>{label}</text>
           </g>
         );
       })}
-      {/* 数据高亮圆点 */}
       {postPoints.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r={activeIdx === i ? 8 : 5} fill={activeIdx === i ? "#2563EB" : "#3B82F6"} className="transition-all duration-300 cursor-pointer shadow-lg" onClick={() => onSelectCategory(i)} />
+        <circle key={i} cx={p.x} cy={p.y} r={activeIdx === i ? 7 : 4} fill={activeIdx === i ? "#2563EB" : "#3B82F6"} className="transition-all duration-300" />
       ))}
     </svg>
   );
 };
 
 // ============================================================
-// 🚀 数据接口层 (Notion Cloud Database)
+// 🚀 数据接口层
 // ============================================================
 class NotionService {
   static getBaseUrl() { 
-    const url = DEFAULT_CONFIG.proxyUrl.replace(/\/$/, '');
-    return `${url}/v1/`; 
+    return `${DEFAULT_CONFIG.proxyUrl.replace(/\/$/, '')}/v1/`; 
   }
 
   static async syncRecord(record: any) {
@@ -164,12 +149,12 @@ class NotionService {
       });
       
       if (!res.ok) {
-        const errData = await res.json();
-        return { success: false, message: errData.message || "Notion API Error" };
+        const errInfo = await res.json();
+        throw new Error(errInfo.message || "API调用失败");
       }
       return { success: true };
-    } catch (e) { 
-      return { success: false, message: "无法连接到代理服务器，请检查网络。" }; 
+    } catch (e: any) { 
+      return { success: false, message: e.message || "同步服务不可用" }; 
     }
   }
 
@@ -214,15 +199,32 @@ const App: React.FC = () => {
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   
-  const [profile, setProfile] = useState({ name: '', studentId: '', className: '' });
-  const [preRatings, setPreRatings] = useState<Record<number, Rating>>({});
-  const [postRatings, setPostRatings] = useState<Record<number, Rating>>({});
+  // 持久化
+  const [profile, setProfile] = useState(() => {
+    const saved = localStorage.getItem('tapeps_profile');
+    return saved ? JSON.parse(saved) : { name: '', studentId: '', className: '' };
+  });
+
+  const [preRatings, setPreRatings] = useState<Record<number, Rating>>(() => {
+    const saved = localStorage.getItem('tapeps_pre_ratings');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [postRatings, setPostRatings] = useState<Record<number, Rating>>(() => {
+    const saved = localStorage.getItem('tapeps_post_ratings');
+    return saved ? JSON.parse(saved) : {};
+  });
+
   const [records, setRecords] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
 
-  // 计算分数逻辑
+  useEffect(() => localStorage.setItem('tapeps_profile', JSON.stringify(profile)), [profile]);
+  useEffect(() => localStorage.setItem('tapeps_pre_ratings', JSON.stringify(preRatings)), [preRatings]);
+  useEffect(() => localStorage.setItem('tapeps_post_ratings', JSON.stringify(postRatings)), [postRatings]);
+
   const preScores = useMemo(() => {
     return CATEGORIES.map((cat, idx) => {
       let offset = CATEGORIES.slice(0, idx).reduce((a, b) => a + b.questions.length, 0);
@@ -241,11 +243,6 @@ const App: React.FC = () => {
     });
   }, [postRatings]);
 
-  const handleTabChange = (tab: 'pre' | 'post' | 'compare') => {
-    setActiveTab(tab);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   const handleVerifyPassword = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (passwordInput === TEACHER_PASSWORD) {
@@ -263,14 +260,25 @@ const App: React.FC = () => {
     setIsFetching(false);
   };
 
-  const handleSubmit = async () => {
-    if(!profile.name || !profile.studentId) return alert("请在上方填写姓名和学号，这是同步档案的必要标识。");
-    
-    // 检查是否至少填了一个自测
-    if (Object.keys(preRatings).length === 0 && Object.keys(postRatings).length === 0) {
-      return alert("请先完成至少一项维度的评价。");
-    }
+  const filteredRecords = useMemo(() => {
+    return records.filter(r => 
+      r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      r.studentId.includes(searchQuery)
+    );
+  }, [records, searchQuery]);
 
+  const handleReset = () => {
+    if(confirm("确定清空本地填写的草稿吗？")) {
+      setPreRatings({});
+      setPostRatings({});
+      localStorage.removeItem('tapeps_pre_ratings');
+      localStorage.removeItem('tapeps_post_ratings');
+    }
+  };
+
+  const handleSubmit = async () => {
+    if(!profile.name || !profile.studentId) return alert("请先在顶部填写姓名和学号。");
+    
     setIsSubmitting(true);
     const res = await NotionService.syncRecord({
       ...profile,
@@ -280,113 +288,137 @@ const App: React.FC = () => {
       postScores
     });
     setIsSubmitting(false);
-    
+
     if(res.success) {
       setSyncSuccess(true);
-      setTimeout(() => setSyncSuccess(false), 5000);
+      setTimeout(() => setSyncSuccess(false), 3000);
     } else {
-      alert(`❌ 同步失败: ${res.message}`);
+      alert(`同步失败: ${res.message}\n请检查数据库 ID 和 API Key 是否正确配置。`);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#FBFBFA] text-slate-900 pb-24 font-sans selection:bg-blue-100">
+    <div className="min-h-screen bg-[#F7F7F5] text-slate-900 pb-20 selection:bg-blue-100">
       {/* 顶部导航 */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-6 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
-            <TrendingUp size={22} />
-          </div>
-          <div>
-            <h1 className="text-lg font-black tracking-tighter leading-none">TAPEPS</h1>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Smart Feedback</p>
-          </div>
+      <nav className="sticky top-0 z-40 bg-white/70 backdrop-blur-xl border-b border-slate-200/50 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white"><TrendingUp size={18}/></div>
+          <span className="font-black tracking-tight text-lg">TAPEPS</span>
         </div>
-        <div className="flex bg-slate-100/80 p-1 rounded-2xl border border-slate-200/50">
-          <button onClick={() => setView('student')} className={`px-5 py-2 rounded-xl text-[12px] font-black transition-all ${view === 'student' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>自测入口</button>
-          <button onClick={() => isTeacherAuthenticated ? setView('teacher') : setShowPasswordPrompt(true)} className={`px-5 py-2 rounded-xl text-[12px] font-black transition-all flex items-center gap-2 ${view === 'teacher' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-            {isTeacherAuthenticated ? <Unlock size={14}/> : <Lock size={14}/>} 管理后台
+        <div className="flex bg-slate-200/50 p-1 rounded-xl">
+          <button onClick={() => setView('student')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${view === 'student' ? 'bg-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>学生入口</button>
+          <button onClick={() => isTeacherAuthenticated ? setView('teacher') : setShowPasswordPrompt(true)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${view === 'teacher' ? 'bg-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            {isTeacherAuthenticated ? <Unlock size={12}/> : <Lock size={12}/>} 管理端
           </button>
         </div>
       </nav>
 
-      {/* 密码弹窗 */}
+      {/* 密码验证 */}
       {showPasswordPrompt && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="bg-white rounded-[40px] p-10 w-full max-w-sm text-center shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6"><Lock size={28}/></div>
-            <h3 className="text-xl font-black mb-6 text-slate-800 tracking-tight">教师端身份验证</h3>
-            <input type="password" autoFocus maxLength={4} value={passwordInput} onChange={e => setPasswordInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleVerifyPassword()} placeholder="••••" className="w-full text-center text-3xl tracking-[0.5em] py-4 bg-slate-50 border-none rounded-2xl font-black mb-6 focus:ring-2 focus:ring-blue-200 outline-none" />
-            <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => setShowPasswordPrompt(false)} className="py-4 bg-slate-100 text-slate-500 rounded-2xl font-bold text-sm hover:bg-slate-200 transition-all">取消</button>
-              <button onClick={() => handleVerifyPassword()} className="py-4 bg-blue-600 text-white rounded-2xl font-bold text-sm hover:bg-blue-700 transition-all">进入系统</button>
+        <div className="fixed inset-0 z-50 bg-slate-900/10 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-xs shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
+            <h3 className="text-center font-black text-slate-800 mb-6">管理端访问代码</h3>
+            <input 
+              type="password" 
+              autoFocus 
+              maxLength={4} 
+              value={passwordInput} 
+              onChange={e => setPasswordInput(e.target.value)} 
+              onKeyDown={e => e.key === 'Enter' && handleVerifyPassword()} 
+              className="w-full text-center text-2xl py-3 bg-slate-100 rounded-xl mb-6 outline-none border-2 border-transparent focus:border-blue-500 transition-all font-black tracking-widest" 
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setShowPasswordPrompt(false)} className="py-3 bg-slate-50 rounded-xl font-bold text-xs text-slate-400 hover:bg-slate-100 transition-colors">取消</button>
+              <button onClick={() => handleVerifyPassword()} className="py-3 bg-black text-white rounded-xl font-bold text-xs hover:bg-slate-800 transition-colors">登录</button>
             </div>
           </div>
         </div>
       )}
 
-      <main className="max-w-4xl mx-auto px-6 pt-10">
+      <main className="max-w-3xl mx-auto px-6 pt-10">
         {view === 'student' ? (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {/* 个人信息卡片 */}
-            <div className="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-6">
-               {[
-                 { label: '姓名', key: 'name', placeholder: '张三' },
-                 { label: '学号', key: 'studentId', placeholder: '2024001' },
-                 { label: '班级', key: 'className', placeholder: '初二(3)班' }
-               ].map((field) => (
-                  <div key={field.key} className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">{field.label}</label>
-                    <input 
-                      placeholder={field.placeholder} 
-                      value={profile[field.key as keyof typeof profile]} 
-                      onChange={e => setProfile({...profile, [field.key]: e.target.value})} 
-                      className="w-full bg-slate-50/50 p-4 rounded-2xl border border-slate-100 font-bold text-sm focus:ring-2 focus:ring-blue-100 transition-all outline-none placeholder:text-slate-300" 
-                    />
-                  </div>
-                ))}
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {/* 用户基本信息 */}
+            <div className="bg-white rounded-3xl p-8 border border-slate-200/60 shadow-sm relative overflow-hidden group">
+               <div className="absolute top-0 left-0 w-1 h-full bg-slate-900 opacity-10 group-focus-within:opacity-100 transition-opacity"></div>
+               <div className="flex items-center gap-2 mb-8 text-slate-400">
+                 <User size={16}/> <span className="text-[10px] font-black uppercase tracking-widest">Digital Learning Profile</span>
+               </div>
+               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                 {[
+                   { label: '姓名', key: 'name', ph: '输入姓名' },
+                   { label: '学号', key: 'studentId', ph: '输入学号' },
+                   { label: '班级', key: 'className', ph: '班级名称' }
+                 ].map(f => (
+                   <div key={f.key} className="space-y-2">
+                     <label className="text-[10px] font-black text-slate-400 ml-1 uppercase tracking-wider">{f.label}</label>
+                     <input 
+                       value={profile[f.key as keyof typeof profile]} 
+                       onChange={e => setProfile({...profile, [f.key]: e.target.value})} 
+                       placeholder={f.ph} 
+                       className="w-full bg-slate-50 p-4 rounded-xl border border-transparent focus:bg-white focus:border-slate-200 transition-all text-sm font-bold outline-none placeholder:text-slate-300" 
+                     />
+                   </div>
+                 ))}
+               </div>
             </div>
 
-            {/* 流程导航 */}
-            <div className="flex bg-slate-200/40 p-1.5 rounded-3xl max-w-lg mx-auto border border-slate-200/30">
+            {/* 标签页导航 */}
+            <div className="flex bg-slate-200/40 p-1.5 rounded-2xl max-w-md mx-auto border border-slate-200/20">
               {[
-                {id: 'pre', label: '开课前', icon: <Target size={14}/>}, 
-                {id: 'post', label: '结课后', icon: <Award size={14}/>}, 
-                {id: 'compare', label: '成长报告', icon: <LayoutDashboard size={14}/>}
+                {id: 'pre', label: '阶段前', icon: <Target size={14}/>}, 
+                {id: 'post', label: '阶段后', icon: <Award size={14}/>}, 
+                {id: 'compare', label: '成长看板', icon: <LayoutDashboard size={14}/>}
               ].map(t => (
-                <button key={t.id} onClick={() => handleTabChange(t.id as any)} className={`flex-1 py-3.5 rounded-2xl text-[12px] font-black transition-all flex items-center justify-center gap-2 ${activeTab === t.id ? 'bg-white text-blue-600 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}>
+                <button 
+                  key={t.id} 
+                  onClick={() => setActiveTab(t.id as any)} 
+                  className={`flex-1 py-3 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-2 ${activeTab === t.id ? 'bg-white shadow-md text-black' : 'text-slate-500 hover:text-slate-800'}`}
+                >
                   {t.icon} {t.label}
                 </button>
               ))}
             </div>
 
-            {/* 填报区 */}
+            {/* 评估题目内容 */}
             {activeTab !== 'compare' ? (
-              <div className="space-y-12 pb-20">
+              <div className="space-y-12 pb-32">
+                <div className="flex justify-between items-end px-2">
+                   <div>
+                     <h2 className="text-2xl font-black tracking-tight">{activeTab === 'pre' ? '初始基准评估' : '学习成果评估'}</h2>
+                     <p className="text-xs text-slate-400 mt-1">请根据真实感受进行五级评分 (A最高, E最低)</p>
+                   </div>
+                   <button onClick={handleReset} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18}/></button>
+                </div>
+
                 {CATEGORIES.map((cat, idx) => {
                   let offset = CATEGORIES.slice(0, idx).reduce((a, b) => a + b.questions.length, 0);
                   return (
-                    <section key={cat.name} className="animate-in fade-in duration-500">
-                      <div className="flex items-center gap-3 mb-6 px-4">
-                        <div className="w-2 h-8 rounded-full" style={{backgroundColor: cat.color}}></div>
-                        <h3 className="text-2xl font-black text-slate-800 tracking-tight uppercase">{cat.name}</h3>
+                    <div key={cat.name} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="flex items-center gap-3 mb-5 ml-2">
+                        <div className="w-1.5 h-5 rounded-full" style={{backgroundColor: cat.color}}></div>
+                        <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest">{cat.name}</h3>
                       </div>
-                      <div className="bg-white rounded-[40px] border border-slate-100 p-8 space-y-10 shadow-sm">
+                      <div className="bg-white rounded-[32px] border border-slate-200/50 p-8 space-y-12 shadow-sm">
                         {cat.questions.map((q, i) => {
                           const qIdx = offset + i + 1;
                           const currentRating = (activeTab === 'pre' ? preRatings : postRatings)[qIdx];
                           return (
-                            <div key={qIdx} className="group">
-                              <p className="font-bold text-slate-700 text-lg flex gap-4 items-start leading-tight mb-5">
-                                <span className="shrink-0 w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-[12px] font-black text-slate-300 border border-slate-100">{qIdx}</span>
+                            <div key={qIdx} className="space-y-5">
+                              <p className="font-bold text-slate-800 text-[15px] leading-relaxed flex gap-4">
+                                <span className="shrink-0 text-slate-200 font-black">{qIdx < 10 ? `0${qIdx}` : qIdx}</span>
                                 {q}
                               </p>
-                              <div className="flex gap-3 pl-12 overflow-x-auto pb-2 no-scrollbar">
+                              <div className="flex gap-2.5">
                                 {(['A', 'B', 'C', 'D', 'E'] as Rating[]).map(r => (
                                   <button 
                                     key={r} 
                                     onClick={() => activeTab === 'pre' ? setPreRatings({...preRatings, [qIdx]: r}) : setPostRatings({...postRatings, [qIdx]: r})} 
-                                    className={`w-14 h-14 rounded-2xl border-2 font-black text-lg transition-all shrink-0 ${currentRating === r ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-105' : 'border-slate-50 bg-slate-50/50 text-slate-300 hover:border-slate-200'}`}
+                                    className={`flex-1 py-4 rounded-2xl border-2 font-black text-xs transition-all ${
+                                      currentRating === r 
+                                      ? 'bg-black border-black text-white shadow-lg scale-105' 
+                                      : 'border-slate-50 bg-slate-50 text-slate-300 hover:border-slate-200'
+                                    }`}
                                   >
                                     {r}
                                   </button>
@@ -396,62 +428,52 @@ const App: React.FC = () => {
                           );
                         })}
                       </div>
-                    </section>
+                    </div>
                   );
                 })}
               </div>
             ) : (
-              /* 分析看板 */
-              <div className="space-y-8 pb-32">
-                <div className="bg-white rounded-[48px] p-10 md:p-14 shadow-xl border border-slate-100">
-                  <div className="text-center mb-10">
-                    <span className="inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-3 italic">Digital Growth Portrait</span>
-                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">能力成长雷达</h3>
-                    <div className="flex items-center justify-center gap-8 mt-6">
-                       <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                         <div className="w-4 h-0.5 border-t-2 border-dashed border-slate-300"></div> 开课前
-                       </div>
-                       <div className="flex items-center gap-2 text-[10px] font-bold text-blue-500 uppercase tracking-widest">
-                         <div className="w-4 h-1.5 bg-blue-500 rounded-full"></div> 结课后
-                       </div>
-                    </div>
+              /* 数据可视化分析 */
+              <div className="space-y-10 pb-32 animate-in fade-in duration-700">
+                <div className="bg-white rounded-[48px] p-10 sm:p-14 border border-slate-200/60 shadow-xl relative overflow-hidden">
+                  <div className="text-center mb-12">
+                    <h3 className="text-3xl font-black tracking-tight text-slate-900">核心能力评估图</h3>
+                    <p className="text-[10px] font-black text-slate-300 mt-3 uppercase tracking-[0.3em]">Growth Radar Portrait</p>
                   </div>
                   
                   <RadarChart pre={preScores} post={postScores} onSelectCategory={setActiveCategory} activeIdx={activeCategory} />
                   
                   {activeCategory !== null && (
-                    <div className="mt-10 p-8 rounded-[36px] bg-slate-50 border border-slate-100 animate-in slide-in-from-top-4 duration-500">
+                    <div className="mt-14 p-8 rounded-[40px] bg-slate-50 border border-slate-100 animate-in slide-in-from-top-4 duration-500 shadow-inner">
                        <div className="flex items-center justify-between mb-8">
                          <div className="flex items-center gap-4">
-                           <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg" style={{backgroundColor: CATEGORIES[activeCategory].color}}><Target size={24}/></div>
-                           <div>
-                             <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight">{CATEGORIES[activeCategory].name}</h4>
-                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dimension Detail</p>
-                           </div>
+                            <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg" style={{backgroundColor: CATEGORIES[activeCategory].color}}><Target size={20}/></div>
+                            <div>
+                              <h4 className="font-black text-slate-900 uppercase text-sm tracking-widest">{CATEGORIES[activeCategory].name}</h4>
+                              <p className="text-[10px] font-bold text-slate-400">维度深度分析</p>
+                            </div>
                          </div>
-                         <div className="bg-blue-100/50 px-4 py-2 rounded-2xl flex items-center gap-2">
-                           <TrendingUp size={16} className="text-blue-600"/>
-                           <span className="text-lg font-black text-blue-600">+{postScores[activeCategory] - preScores[activeCategory]}</span>
+                         <div className="flex flex-col items-end">
+                            <span className="text-xs font-black text-blue-600 bg-blue-100/50 px-4 py-1.5 rounded-full border border-blue-100">提升 +{postScores[activeCategory] - preScores[activeCategory]} 分</span>
                          </div>
                        </div>
-
-                       <div className="grid grid-cols-1 gap-4">
+                       <div className="grid grid-cols-1 gap-3">
                           {CATEGORIES[activeCategory].questions.map((q, i) => {
                             const qIdx = CATEGORIES.slice(0, activeCategory).reduce((a,b)=>a+b.questions.length, 0) + i + 1;
-                            const r1 = preRatings[qIdx] || 'E';
-                            const r2 = postRatings[qIdx] || 'E';
+                            const r1 = preRatings[qIdx] || '-';
+                            const r2 = postRatings[qIdx] || '-';
                             return (
-                              <div key={i} className="flex items-center justify-between p-5 bg-white rounded-3xl border border-slate-100 group transition-all duration-300">
-                                <span className="text-[13px] font-bold text-slate-600 max-w-[60%] leading-snug">{q}</span>
-                                <div className="flex items-center gap-4">
+                              <div key={i} className="flex items-center justify-between p-5 bg-white rounded-3xl border border-slate-100 shadow-sm group hover:border-blue-200 transition-all">
+                                <span className="text-[13px] font-bold text-slate-500 truncate mr-6">{q}</span>
+                                <div className="flex items-center gap-5 shrink-0">
                                   <div className="text-center">
-                                    <span className="text-[8px] font-black text-slate-300 uppercase block">Pre</span>
+                                    <span className="block text-[8px] font-black text-slate-200 uppercase">Pre</span>
                                     <span className="text-sm font-black text-slate-300">{r1}</span>
                                   </div>
-                                  <ChevronRight size={12} className="text-slate-200"/>
+                                  <ChevronRight size={14} className="text-slate-200"/>
                                   <div className="text-center">
-                                    <span className="text-[8px] font-black text-blue-300 uppercase block">Post</span>
-                                    <span className="text-xl font-black text-blue-600">{r2}</span>
+                                    <span className="block text-[8px] font-black text-blue-200 uppercase">Post</span>
+                                    <span className="text-lg font-black text-blue-600">{r2}</span>
                                   </div>
                                 </div>
                               </div>
@@ -462,64 +484,87 @@ const App: React.FC = () => {
                   )}
                 </div>
                 
-                {/* 同步按钮 */}
-                <div className="relative pt-4">
+                <div className="flex flex-col gap-4">
                   <button 
                     onClick={handleSubmit} 
                     disabled={isSubmitting || syncSuccess} 
-                    className={`w-full py-8 rounded-[36px] font-black text-xl shadow-xl transition-all flex items-center justify-center gap-4 ${
+                    className={`w-full py-7 rounded-[36px] font-black text-lg transition-all flex items-center justify-center gap-4 shadow-2xl ${
                       syncSuccess 
-                        ? 'bg-green-500 text-white shadow-green-100 cursor-default' 
+                        ? 'bg-green-500 text-white shadow-green-100' 
                         : isSubmitting 
                           ? 'bg-slate-200 text-slate-400' 
-                          : 'bg-slate-900 text-white hover:bg-blue-600 active:scale-95'
+                          : 'bg-black text-white hover:bg-slate-900 active:scale-95'
                     }`}
                   >
-                    {isSubmitting ? <Loader2 className="animate-spin" size={24}/> : syncSuccess ? <CheckCircle2 size={24}/> : <Database size={24}/>} 
-                    {syncSuccess ? "已成功同步至 Notion 云端" : isSubmitting ? "正在同步档案..." : "同步成长数据报告"}
+                    {isSubmitting ? <Loader2 className="animate-spin" size={24}/> : syncSuccess ? <CheckCircle2 size={24}/> : <Database size={24}/>}
+                    {syncSuccess ? "已成功归档到 Notion" : isSubmitting ? "正在写入云端数据..." : "确认并同步至 Notion"}
                   </button>
                   {syncSuccess && (
-                    <p className="text-center text-[11px] font-bold text-green-500 mt-4 animate-bounce uppercase tracking-widest">Success! Your progress is now on the cloud.</p>
+                    <div className="flex items-center justify-center gap-2 text-green-500 text-[10px] font-black uppercase tracking-widest animate-bounce mt-2">
+                       <CheckCircle2 size={12}/> Awesome! Data is safe in the cloud.
+                    </div>
                   )}
                 </div>
               </div>
             )}
           </div>
         ) : (
-          /* 管理端面板 */
-          <div className="space-y-8 pb-40 animate-in fade-in duration-700">
-            <div className="flex items-center justify-between">
+          /* 管理员视图 */
+          <div className="space-y-8 pb-40 animate-in fade-in duration-500">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
               <div>
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight">评估历史档案</h2>
+                <h2 className="text-3xl font-black text-slate-900 tracking-tight">学生档案库</h2>
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-                  <Database size={12}/> {records.length} Records in Notion
+                  <Database size={12}/> 共计 {records.length} 条已同步记录
                 </p>
               </div>
-              <button onClick={loadRecords} className={`p-4 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-600 transition-all ${isFetching ? 'opacity-50' : ''}`}>
-                <RefreshCw size={20} className={isFetching ? 'animate-spin' : ''}/>
-              </button>
+              <div className="flex gap-3">
+                <button 
+                  onClick={loadRecords} 
+                  className={`p-4 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-black hover:border-black transition-all shadow-sm ${isFetching ? 'opacity-50' : ''}`}
+                >
+                  <RefreshCw size={22} className={isFetching ? 'animate-spin' : ''}/>
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {records.length === 0 ? (
-                <div className="col-span-full py-32 text-center bg-white rounded-[40px] border-2 border-dashed border-slate-200 flex flex-col items-center">
-                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-                    <LayoutDashboard size={28} className="text-slate-200"/>
-                  </div>
-                  <p className="text-slate-300 font-bold">{isFetching ? '正在努力加载...' : '暂无同步记录'}</p>
+            <div className="relative group">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-black transition-colors" size={20}/>
+              <input 
+                value={searchQuery} 
+                onChange={e => setSearchQuery(e.target.value)} 
+                placeholder="搜索姓名或学号..." 
+                className="w-full pl-14 pr-6 py-5 bg-white border border-slate-200 rounded-[28px] outline-none focus:ring-4 focus:ring-slate-100 transition-all text-sm font-bold shadow-sm" 
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-5">
+              {isFetching && records.length === 0 ? (
+                 [1,2,3,4].map(i => <div key={i} className="h-28 bg-white border border-slate-100 rounded-[32px] animate-pulse"></div>)
+              ) : filteredRecords.length === 0 ? (
+                <div className="py-24 text-center text-slate-300 font-bold border-2 border-dashed border-slate-200 rounded-[48px] flex flex-col items-center">
+                  <div className="bg-slate-50 p-6 rounded-full mb-4"><Search size={32}/></div>
+                  <p>未发现匹配的记录</p>
                 </div>
-              ) : records.map(r => (
-                <div key={r.id} className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm flex items-center justify-between group hover:border-blue-300 hover:shadow-lg transition-all cursor-pointer">
-                   <div className="flex items-center gap-5">
-                      <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center font-black text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all text-xl">{r.name.charAt(0)}</div>
-                      <div className="space-y-0.5">
-                        <h4 className="font-black text-lg text-slate-800">{r.name}</h4>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{r.className} · {r.studentId}</p>
+              ) : filteredRecords.map(r => (
+                <div key={r.id} className="bg-white p-7 rounded-[36px] border border-slate-200/60 shadow-sm flex items-center justify-between group hover:shadow-xl hover:border-blue-100 transition-all cursor-default">
+                   <div className="flex items-center gap-6">
+                      <div className="w-16 h-16 bg-slate-50 rounded-[24px] flex items-center justify-center font-black text-slate-300 group-hover:bg-black group-hover:text-white transition-all text-2xl">{r.name.charAt(0)}</div>
+                      <div>
+                        <h4 className="font-black text-xl text-slate-800">{r.name}</h4>
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-2">
+                          {r.className} <span className="opacity-30">|</span> {r.studentId}
+                        </p>
                       </div>
                    </div>
-                   <div className="text-right">
-                      <div className="text-2xl font-black text-blue-600 tracking-tight">{r.postScore}</div>
-                      <div className="text-[8px] font-black text-slate-200 uppercase tracking-widest">Final Score</div>
+                   <div className="flex items-center gap-8">
+                      <div className="text-right">
+                        <div className="text-3xl font-black text-slate-900 tracking-tighter">{r.postScore}</div>
+                        <div className="text-[9px] font-black text-slate-200 uppercase tracking-widest">Final Points</div>
+                      </div>
+                      <div className="w-10 h-10 rounded-full border border-slate-100 flex items-center justify-center text-slate-200 group-hover:text-blue-500 group-hover:border-blue-100 transition-all">
+                        <ChevronRight size={20}/>
+                      </div>
                    </div>
                 </div>
               ))}
