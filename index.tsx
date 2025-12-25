@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { 
@@ -15,8 +14,8 @@ import {
   ChevronRight,
   Award,
   Zap,
-  // Fix: Added missing Loader2 import
-  Loader2
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 
 // ============================================================
@@ -120,7 +119,7 @@ const RadarChart: React.FC<{
 };
 
 // ============================================================
-// 🚀 数据接口层
+// 🚀 数据接口层 (Notion Cloud Database)
 // ============================================================
 class NotionService {
   static getBaseUrl() { return `${DEFAULT_CONFIG.proxyUrl.replace(/\/$/, '')}/v1/`; }
@@ -145,21 +144,41 @@ class NotionService {
           "Post_Logic": { "number": record.postScores[3] }
         }
       };
+      
       const res = await fetch(`${this.getBaseUrl()}pages`, {
         method: "POST",
-        headers: { "Authorization": `Bearer ${DEFAULT_CONFIG.apiKey}`, "Content-Type": "application/json", "Notion-Version": "2022-06-28" },
+        headers: { 
+          "Authorization": `Bearer ${DEFAULT_CONFIG.apiKey}`, 
+          "Content-Type": "application/json", 
+          "Notion-Version": "2022-06-28" 
+        },
         body: JSON.stringify(payload)
       });
-      return { success: res.ok };
-    } catch { return { success: false }; }
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        console.error("Notion API Error:", errData);
+        return { success: false, message: errData.message || "Unknown API Error" };
+      }
+      return { success: true };
+    } catch (e) { 
+      console.error("Sync Error:", e);
+      return { success: false, message: "Network error or Proxy offline" }; 
+    }
   }
 
   static async fetchRecords(): Promise<any[]> {
     try {
       const res = await fetch(`${this.getBaseUrl()}databases/${DEFAULT_CONFIG.dbId}/query`, {
         method: "POST",
-        headers: { "Authorization": `Bearer ${DEFAULT_CONFIG.apiKey}`, "Notion-Version": "2022-06-28", "Content-Type": "application/json" },
-        body: JSON.stringify({ sorts: [{ timestamp: "last_edited_time", direction: "descending" }] })
+        headers: { 
+          "Authorization": `Bearer ${DEFAULT_CONFIG.apiKey}`, 
+          "Notion-Version": "2022-06-28", 
+          "Content-Type": "application/json" 
+        },
+        body: JSON.stringify({ 
+          sorts: [{ timestamp: "last_edited_time", direction: "descending" }] 
+        })
       });
       if (!res.ok) return [];
       const data = await res.json();
@@ -239,7 +258,13 @@ const App: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if(!profile.name || !profile.studentId) return alert("请先填写个人信息");
+    if(!profile.name || !profile.studentId) return alert("请先填写个人信息（姓名和学号）");
+    
+    // 检查是否至少填了一个自测
+    if (Object.keys(preRatings).length === 0 && Object.keys(postRatings).length === 0) {
+      return alert("请至少完成一项测评后再同步数据。");
+    }
+
     setIsSubmitting(true);
     const res = await NotionService.syncRecord({
       ...profile,
@@ -249,20 +274,23 @@ const App: React.FC = () => {
       postScores
     });
     setIsSubmitting(false);
+    
     if(res.success) {
       setSyncSuccess(true);
       setTimeout(() => setSyncSuccess(false), 5000);
-      alert("✅ 成长档案同步成功！");
-    } else alert("同步失败，请检查 alicetapeps.icu 状态。");
+      alert("✅ 恭喜！你的成长档案已成功同步到 Notion 云端。");
+    } else {
+      alert(`❌ 同步失败: ${res.message}\n请检查代理服务 alicetapeps.icu 是否在线。`);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#FBFBFA] text-slate-900 pb-24 font-sans">
+    <div className="min-h-screen bg-[#FBFBFA] text-slate-900 pb-24 font-sans selection:bg-blue-100">
       {/* 顶级导航 */}
       <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-slate-100 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100"><TrendingUp size={22} /></div>
-          <h1 className="text-xl font-black tracking-tighter">TAPEPS <span className="text-blue-500 opacity-40">System</span></h1>
+          <h1 className="text-xl font-black tracking-tighter">TAPEPS <span className="text-blue-500 opacity-40">Notion Sync</span></h1>
         </div>
         <div className="flex bg-slate-100/60 p-1.5 rounded-2xl border border-slate-200/50 transition-all">
           <button onClick={() => setView('student')} className={`px-5 py-2.5 rounded-xl text-[12px] font-black transition-all ${view === 'student' ? 'bg-white shadow-md text-blue-600' : 'text-slate-400'}`}>自测中心</button>
@@ -278,7 +306,7 @@ const App: React.FC = () => {
           <div className="bg-white rounded-[48px] p-12 w-full max-w-sm text-center shadow-2xl animate-in zoom-in-95">
             <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-8"><Lock size={36}/></div>
             <h3 className="text-2xl font-black mb-8 text-slate-800 tracking-tight">管理端身份确认</h3>
-            <input type="password" autoFocus maxLength={4} value={passwordInput} onChange={e => setPasswordInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleVerifyPassword()} placeholder="••••" className="w-full text-center text-4xl tracking-[0.5em] py-5 bg-slate-50 border-none rounded-3xl font-black mb-8 focus:ring-2 focus:ring-blue-100 transition-all" />
+            <input type="password" autoFocus maxLength={4} value={passwordInput} onChange={e => setPasswordInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleVerifyPassword()} placeholder="••••" className="w-full text-center text-4xl tracking-[0.5em] py-5 bg-slate-50 border-none rounded-3xl font-black mb-8 focus:ring-2 focus:ring-blue-100 transition-all outline-none" />
             <button onClick={() => handleVerifyPassword()} className="w-full py-5 bg-slate-900 text-white rounded-3xl font-black text-sm uppercase tracking-widest hover:bg-blue-600 transition-colors">验证进入</button>
             <button onClick={() => setShowPasswordPrompt(false)} className="mt-6 text-xs font-bold text-slate-400 hover:text-slate-600">取消访问</button>
           </div>
@@ -298,7 +326,7 @@ const App: React.FC = () => {
                         if(i===0) setProfile({...profile, name:v});
                         else if(i===1) setProfile({...profile, studentId:v});
                         else setProfile({...profile, className:v});
-                      }} className="w-full bg-slate-50 p-5 rounded-3xl border-none font-bold text-sm focus:ring-2 focus:ring-blue-100 transition-all" />
+                      }} className="w-full bg-slate-50 p-5 rounded-3xl border-none font-bold text-sm focus:ring-2 focus:ring-blue-100 transition-all outline-none" />
                   </div>
                 ))}
             </div>
@@ -438,19 +466,19 @@ const App: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {records.length === 0 ? (
                 <div className="col-span-full py-40 text-center bg-white rounded-[60px] border-2 border-dashed border-slate-100 flex flex-col items-center">
-                  <LayoutDashboard size={48} className="text-slate-100 mb-6"/>
-                  <p className="text-slate-300 font-bold text-xl">暂无任何评估记录提交</p>
+                  {isFetching ? <Loader2 className="animate-spin text-blue-200 mb-6" size={48}/> : <LayoutDashboard size={48} className="text-slate-100 mb-6"/>}
+                  <p className="text-slate-300 font-bold text-xl">{isFetching ? '正在努力连接 Notion...' : '暂无任何评估记录提交'}</p>
                 </div>
               ) : records.map(r => (
                 <div key={r.id} className="bg-white p-10 rounded-[50px] border border-slate-100 shadow-sm flex items-center justify-between group hover:border-blue-400 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer">
                    <div className="flex items-center gap-7">
-                      <div className="w-22 h-22 bg-slate-50 rounded-[32px] flex items-center justify-center font-black text-slate-200 group-hover:bg-blue-600 group-hover:text-white transition-all text-3xl shadow-inner">{r.name.charAt(0)}</div>
+                      <div className="w-22 h-22 bg-slate-50 rounded-[32px] flex items-center justify-center font-black text-slate-200 group-hover:bg-blue-600 group-hover:text-white transition-all text-3xl shadow-inner shrink-0 p-8">{r.name.charAt(0)}</div>
                       <div className="space-y-1">
                         <h4 className="font-black text-2xl tracking-tight text-slate-800">{r.name}</h4>
                         <p className="text-[11px] font-bold text-slate-300 uppercase tracking-widest">{r.className} | {r.studentId}</p>
                       </div>
                    </div>
-                   <div className="text-right flex flex-col items-end">
+                   <div className="text-right flex flex-col items-end shrink-0">
                       <div className="text-4xl font-black text-blue-600 tracking-tighter">{r.postScore}</div>
                       <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest mt-1 bg-slate-50 px-3 py-1 rounded-full">Score Post</div>
                    </div>
