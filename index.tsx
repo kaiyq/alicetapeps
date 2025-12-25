@@ -26,7 +26,7 @@ import {
 const DEFAULT_CONFIG = {
   apiKey: "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", 
   dbId: "2d36f36bb31880cbbb70c43247b18de1", 
-  proxyUrl: "https://alicetapeps.icu/" 
+  proxyUrl: "https://alicetapeps.icu" 
 };
 
 const TEACHER_PASSWORD = "0209";
@@ -97,18 +97,18 @@ const RadarChart: React.FC<{ preScores: number[], postScores: number[], size?: n
           </radialGradient>
         </defs>
         {[0.25, 0.5, 0.75, 1].map(scale => (
-          <circle key={scale} cx={center} cy={center} r={radius * scale} fill="none" stroke="#CBD5E1" strokeWidth="1" strokeDasharray="4 4" />
+          <circle key={scale} cx={center} cy={center} r={radius * scale} fill="none" stroke="#64748B" strokeWidth="1" strokeDasharray="4 4" />
         ))}
         {CATEGORIES.map((_, i) => (
-          <line key={i} x1={center} y1={center} x2={center + radius * Math.cos(i * angleStep - Math.PI / 2)} y2={center + radius * Math.sin(i * angleStep - Math.PI / 2)} stroke="#CBD5E1" strokeWidth="1" />
+          <line key={i} x1={center} y1={center} x2={center + radius * Math.cos(i * angleStep - Math.PI / 2)} y2={center + radius * Math.sin(i * angleStep - Math.PI / 2)} stroke="#64748B" strokeWidth="1" />
         ))}
-        <polygon points={prePoints.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#64748B" strokeWidth="2" strokeDasharray="4 2" />
+        <polygon points={prePoints.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#0F172A" strokeWidth="2" strokeDasharray="4 2" />
         <polygon points={postPoints.map(p => `${p.x},${p.y}`).join(' ')} fill="url(#postGradient)" stroke="#059669" strokeWidth="3" />
         {CATEGORIES.map((cat, i) => {
-          const x = center + (radius + 35) * Math.cos(i * angleStep - Math.PI / 2);
-          const y = center + (radius + 35) * Math.sin(i * angleStep - Math.PI / 2);
+          const x = center + (radius + 45) * Math.cos(i * angleStep - Math.PI / 2);
+          const y = center + (radius + 45) * Math.sin(i * angleStep - Math.PI / 2);
           return (
-            <text key={i} x={x} y={y} textAnchor="middle" className="text-[11px] font-black fill-slate-700 uppercase">{cat.name}</text>
+            <text key={i} x={x} y={y} textAnchor="middle" className="text-[12px] font-black fill-slate-950 uppercase">{cat.name}</text>
           );
         })}
       </svg>
@@ -120,7 +120,10 @@ const RadarChart: React.FC<{ preScores: number[], postScores: number[], size?: n
 // 🚀 Notion 服务
 // ============================================================
 class NotionService {
-  static getBaseUrl() { return `${DEFAULT_CONFIG.proxyUrl.replace(/\/$/, '')}/v1/`; }
+  static getBaseUrl() { 
+    const base = DEFAULT_CONFIG.proxyUrl.replace(/\/$/, '');
+    return `${base}/v1/`; 
+  }
   
   static async syncRecord(record: any) {
     try {
@@ -276,99 +279,81 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F1F3F5] text-slate-900 pb-12 font-sans selection:bg-indigo-100">
+    <div className="min-h-screen bg-slate-50 text-slate-950 pb-12 font-sans selection:bg-indigo-100">
       {/* 顶部导航 */}
-      <nav className="sticky top-0 z-40 bg-white border-b-2 border-slate-200 px-4 md:px-8 py-4 flex items-center justify-between shadow-sm">
+      <nav className="sticky top-0 z-40 bg-white border-b-4 border-slate-950 px-4 md:px-8 py-4 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg"><TrendingUp size={20}/></div>
+          <div className="w-12 h-12 bg-slate-950 rounded-xl flex items-center justify-center text-white shadow-xl"><TrendingUp size={24}/></div>
           <div>
-            <span className="font-black text-2xl tracking-tighter italic uppercase block leading-none text-slate-900">Tapeps</span>
-            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mt-0.5">Cloud Database Console</span>
+            <span className="font-black text-3xl tracking-tighter italic uppercase block leading-none text-slate-950">Tapeps</span>
+            <span className="text-[11px] font-black text-slate-700 uppercase tracking-[0.2em] mt-0.5">Cloud Database Platform</span>
           </div>
         </div>
-        <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
-          <button onClick={() => setView('student')} className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${view === 'student' ? 'bg-white shadow-md text-slate-900' : 'text-slate-500 hover:text-slate-800'}`}>学生入口</button>
-          <button onClick={() => isTeacherAuthenticated ? setView('teacher') : setShowPasswordPrompt(true)} className={`px-5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${view === 'teacher' ? 'bg-white shadow-md text-slate-900' : 'text-slate-500 hover:text-slate-800'}`}>
-            <Lock size={12}/> 教师控制台
+        <div className="flex bg-slate-200 p-2 rounded-2xl border-4 border-slate-300">
+          <button onClick={() => setView('student')} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all ${view === 'student' ? 'bg-slate-950 text-white shadow-xl scale-110' : 'text-slate-700 hover:text-slate-950'}`}>学生入口</button>
+          <button onClick={() => isTeacherAuthenticated ? setView('teacher') : setShowPasswordPrompt(true)} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${view === 'teacher' ? 'bg-slate-950 text-white shadow-xl scale-110' : 'text-slate-700 hover:text-slate-950'}`}>
+            <Lock size={14}/> 教师管理
           </button>
         </div>
       </nav>
 
-      {/* 密码弹窗 */}
-      {showPasswordPrompt && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6">
-          <div className="bg-white rounded-[40px] p-12 w-full max-w-sm shadow-2xl relative">
-            <button onClick={() => setShowPasswordPrompt(false)} className="absolute top-8 right-8 text-slate-400 hover:text-slate-900"><X size={24}/></button>
-            <h3 className="text-center font-black text-2xl mb-10 uppercase italic tracking-tighter text-slate-900 underline decoration-slate-200 underline-offset-8">Admin Access</h3>
-            <input 
-              type="password" autoFocus value={passwordInput} 
-              onChange={e => setPasswordInput(e.target.value)} 
-              onKeyDown={e => e.key === 'Enter' && handleVerifyPassword()} 
-              className="w-full text-center text-4xl py-6 bg-slate-50 rounded-3xl mb-10 outline-none border-4 border-slate-100 focus:border-slate-900 transition-all font-black tracking-[0.5em]" 
-              placeholder="••••"
-            />
-            <button onClick={handleVerifyPassword} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl">Verify & Enter</button>
-          </div>
-        </div>
-      )}
-
-      {/* 教师端：详细数据模态框 (高对比度) */}
+      {/* 教师端模态框 */}
       {detailStudent && (
-        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-6">
-           <div className="bg-white rounded-t-[40px] sm:rounded-[40px] w-full max-w-2xl h-[92vh] sm:h-auto overflow-y-auto shadow-2xl relative border-t-8 border-slate-900">
-              <button onClick={() => setDetailStudent(null)} className="absolute top-8 right-8 w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center hover:bg-slate-900 hover:text-white transition-all z-10 shadow-sm"><X size={24}/></button>
-              <div className="p-8 sm:p-14 space-y-12">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-8">
-                  <div className="w-24 h-24 bg-slate-900 text-white rounded-[32px] flex items-center justify-center text-4xl font-black italic shadow-2xl">{detailStudent.name.charAt(0)}</div>
-                  <div className="text-center sm:text-left space-y-2">
-                    <h3 className="text-5xl font-black tracking-tighter leading-none text-slate-900 uppercase italic">{detailStudent.name}</h3>
-                    <div className="flex flex-wrap justify-center sm:justify-start gap-2">
-                      <span className="bg-slate-100 px-3 py-1 rounded-lg text-xs font-black text-slate-700 uppercase tracking-widest">ID: {detailStudent.studentId}</span>
-                      <span className="bg-indigo-100 px-3 py-1 rounded-lg text-xs font-black text-indigo-700 uppercase tracking-widest">Class: {detailStudent.className}</span>
+        <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-0 sm:p-6">
+           <div className="bg-white rounded-none sm:rounded-[60px] w-full max-w-3xl h-full sm:h-auto max-h-[95vh] overflow-y-auto shadow-2xl relative border-t-[16px] border-slate-950">
+              <button onClick={() => setDetailStudent(null)} className="absolute top-10 right-10 w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center hover:bg-slate-950 hover:text-white transition-all z-10 shadow-xl border-4 border-slate-950"><X size={32}/></button>
+              <div className="p-10 sm:p-20 space-y-16">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-10">
+                  <div className="w-32 h-32 bg-slate-950 text-white rounded-[40px] flex items-center justify-center text-6xl font-black italic shadow-2xl">{detailStudent.name.charAt(0)}</div>
+                  <div className="text-center sm:text-left space-y-4">
+                    <h3 className="text-7xl font-black tracking-tighter leading-none text-slate-950 uppercase italic">{detailStudent.name}</h3>
+                    <div className="flex flex-wrap justify-center sm:justify-start gap-4">
+                      <span className="bg-slate-950 text-white px-5 py-2 rounded-xl text-sm font-black uppercase tracking-widest">Student ID: {detailStudent.studentId}</span>
+                      <span className="bg-indigo-600 text-white px-5 py-2 rounded-xl text-sm font-black uppercase tracking-widest">Class: {detailStudent.className}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                   <div className="bg-slate-50 border-2 border-slate-100 p-6 rounded-3xl text-center">
-                      <p className="text-[11px] font-black text-slate-500 uppercase mb-2 tracking-widest">Pre-Test</p>
-                      <p className="text-4xl font-black italic text-slate-900 leading-none">{detailStudent.preScore}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                   <div className="bg-slate-50 border-4 border-slate-200 p-8 rounded-[40px] text-center shadow-inner">
+                      <p className="text-xs font-black text-slate-600 uppercase mb-3 tracking-[0.3em]">Pre-Test Score</p>
+                      <p className="text-6xl font-black italic text-slate-950 leading-none">{detailStudent.preScore}</p>
                    </div>
-                   <div className="bg-emerald-50 border-2 border-emerald-100 p-6 rounded-3xl text-center">
-                      <p className="text-[11px] font-black text-emerald-600 uppercase mb-2 tracking-widest">Post-Test</p>
-                      <p className="text-4xl font-black italic text-emerald-700 leading-none">{detailStudent.postScore}</p>
+                   <div className="bg-emerald-50 border-4 border-emerald-200 p-8 rounded-[40px] text-center shadow-inner">
+                      <p className="text-xs font-black text-emerald-800 uppercase mb-3 tracking-[0.3em]">Post-Test Score</p>
+                      <p className="text-6xl font-black italic text-emerald-950 leading-none">{detailStudent.postScore}</p>
                    </div>
-                   <div className="bg-slate-900 p-6 rounded-3xl text-white text-center shadow-2xl">
-                      <p className="text-[11px] font-black text-slate-400 uppercase mb-2 tracking-widest">Progress</p>
-                      <p className="text-4xl font-black italic leading-none">{detailStudent.postScore - detailStudent.preScore >= 0 ? '+' : ''}{detailStudent.postScore - detailStudent.preScore}</p>
+                   <div className="bg-slate-950 p-8 rounded-[40px] text-white text-center shadow-2xl scale-105 border-4 border-slate-800">
+                      <p className="text-xs font-black text-slate-400 uppercase mb-3 tracking-[0.3em]">Net Growth</p>
+                      <p className="text-6xl font-black italic leading-none">{detailStudent.postScore - detailStudent.preScore >= 0 ? '+' : ''}{detailStudent.postScore - detailStudent.preScore}</p>
                    </div>
                 </div>
 
-                <div className="bg-slate-50 rounded-[48px] p-10 flex flex-col items-center gap-14 border-2 border-slate-200 shadow-inner">
-                   <div className="w-full space-y-10">
-                      <h4 className="font-black text-[13px] uppercase tracking-[0.4em] flex items-center gap-3 text-slate-900 border-b-2 border-slate-200 pb-4"><PieChart size={18}/> Dimension Data</h4>
-                      <div className="grid grid-cols-1 gap-8">
+                <div className="bg-slate-50 rounded-[64px] p-12 border-4 border-slate-200 flex flex-col items-center gap-16">
+                   <div className="w-full space-y-12">
+                      <h4 className="font-black text-sm uppercase tracking-[0.5em] flex items-center gap-4 text-slate-950 border-b-4 border-slate-950 pb-6"><PieChart size={24}/> Statistical Dimensions</h4>
+                      <div className="grid grid-cols-1 gap-10">
                         {CATEGORIES.map((cat, i) => {
                           const preS = detailStudent.preSubScores[i];
                           const postS = detailStudent.postSubScores[i];
                           const max = cat.questionsCount * 4;
                           return (
-                            <div key={i} className="space-y-4">
-                              <div className="flex justify-between text-xs font-black uppercase tracking-widest text-slate-800">
-                                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{backgroundColor: cat.color}}></div>{cat.name}</span>
-                                <span>{preS} <span className="text-slate-300 mx-1">→</span> <span className="text-emerald-600">{postS}</span> <span className="text-slate-400">/ {max}</span></span>
+                            <div key={i} className="space-y-5">
+                              <div className="flex justify-between text-sm font-black uppercase tracking-widest text-slate-950">
+                                <span className="flex items-center gap-3"><div className="w-4 h-4 rounded-full border-2 border-slate-950" style={{backgroundColor: cat.color}}></div>{cat.name}</span>
+                                <span>{preS} <span className="text-slate-400 mx-2">➞</span> <span className="text-emerald-700 font-black underline decoration-2">{postS}</span> <span className="text-slate-900 ml-1">/ {max}</span></span>
                               </div>
-                              <div className="h-4 bg-white rounded-full overflow-hidden ring-2 ring-slate-200 relative p-1">
-                                <div className="absolute inset-y-1 left-1 bg-slate-200/60 rounded-full" style={{ width: `calc(${(preS/max)*100}% - 8px)` }}></div>
-                                <div className="h-full bg-emerald-500 rounded-full relative z-10 shadow-sm" style={{ width: `${(postS/max)*100}%` }}></div>
+                              <div className="h-7 bg-white rounded-full overflow-hidden ring-4 ring-slate-200 relative p-1.5 shadow-inner">
+                                <div className="absolute inset-y-1.5 left-1.5 bg-slate-300 rounded-full opacity-60" style={{ width: `calc(${(preS/max)*100}% - 12px)` }}></div>
+                                <div className="h-full bg-emerald-600 rounded-full relative z-10 shadow-lg border-r-4 border-white" style={{ width: `${(postS/max)*100}%` }}></div>
                               </div>
                             </div>
                           )
                         })}
                       </div>
                    </div>
-                   <div className="bg-white rounded-[56px] p-8 shadow-2xl border-4 border-slate-50">
-                     <RadarChart preScores={detailStudent.preSubScores} postScores={detailStudent.postSubScores} size={280} />
+                   <div className="bg-white rounded-[72px] p-10 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] border-8 border-slate-100 scale-110">
+                     <RadarChart preScores={detailStudent.preSubScores} postScores={detailStudent.postSubScores} size={300} />
                    </div>
                 </div>
               </div>
@@ -376,209 +361,195 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-8 pt-10">
+      {/* 主界面 */}
+      <main className="max-w-7xl mx-auto px-6 pt-16">
         {view === 'student' ? (
-          <div className="max-w-3xl mx-auto space-y-10 animate-in fade-in duration-500">
-             {/* 学生输入 */}
-             <div className="bg-white rounded-[36px] p-10 border-2 border-slate-200 shadow-lg space-y-10 relative overflow-hidden group">
-              <h3 className="text-center font-black text-xs uppercase tracking-[0.4em] text-slate-900 border-b-2 border-slate-50 pb-6 flex items-center justify-center gap-3">
-                <User size={18}/> Step 1: Identity Profile
+          <div className="max-w-4xl mx-auto space-y-16">
+            {/* 学生信息 */}
+            <div className="bg-white rounded-[48px] p-12 border-8 border-slate-950 shadow-2xl space-y-12">
+              <h3 className="text-center font-black text-sm uppercase tracking-[0.6em] text-slate-950 border-b-4 border-slate-100 pb-8 flex items-center justify-center gap-4">
+                <User size={20}/> Member Profile Registration
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {[
-                  { label: '姓名 (Name)', key: 'name', ph: '张三' },
-                  { label: '学号 (ID)', key: 'studentId', ph: '20240001' },
-                  { label: '班级 (Class)', key: 'className', ph: 'Grade 10-1' }
+                  { label: '姓名 (Full Name)', key: 'name', ph: 'Ex: Li Hua' },
+                  { label: '学号 (Student ID)', key: 'studentId', ph: 'Ex: 202501' },
+                  { label: '班级 (Class Group)', key: 'className', ph: 'Ex: Class A' }
                 ].map(f => (
-                  <div key={f.key} className="space-y-3">
-                    <label className="text-[11px] font-black text-slate-700 uppercase tracking-widest ml-1">{f.label}</label>
+                  <div key={f.key} className="space-y-4">
+                    <label className="text-[12px] font-black text-slate-950 uppercase tracking-widest ml-1">{f.label}</label>
                     <input 
                       value={profile[f.key as keyof typeof profile]} 
                       onChange={e => setProfile({...profile, [f.key]: e.target.value})} 
                       placeholder={f.ph} 
-                      className="w-full bg-slate-50 p-5 rounded-2xl border-2 border-slate-100 focus:bg-white focus:border-slate-900 transition-all text-sm font-black outline-none shadow-inner text-slate-900 placeholder:text-slate-300" 
+                      className="w-full bg-slate-100 p-6 rounded-3xl border-4 border-slate-200 focus:bg-white focus:border-slate-950 transition-all text-base font-black outline-none text-slate-950 placeholder:text-slate-400" 
                     />
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* 标签切换 */}
-            <div className="flex bg-slate-200/50 p-2 rounded-3xl max-w-sm mx-auto shadow-inner sticky top-24 z-30 ring-1 ring-slate-200 backdrop-blur-md">
-              {[
-                {id: 'pre', label: 'PRE-TEST'}, 
-                {id: 'post', label: 'POST-TEST'}, 
-                {id: 'compare', label: 'CLOUD SYNC'}
-              ].map(t => (
-                <button key={t.id} onClick={() => setActiveTab(t.id as any)} className={`flex-1 py-4 rounded-2xl text-[10px] font-black transition-all ${activeTab === t.id ? 'bg-slate-900 text-white shadow-xl scale-105' : 'text-slate-500 hover:text-slate-900'}`}>{t.label}</button>
-              ))}
+            {/* 内容区域 */}
+            <div className="space-y-12">
+               <div className="flex bg-slate-200 p-3 rounded-[32px] max-w-lg mx-auto shadow-inner ring-4 ring-slate-300">
+                {[
+                  {id: 'pre', label: 'PRE-TEST'}, 
+                  {id: 'post', label: 'POST-TEST'}, 
+                  {id: 'compare', label: 'SYNC CLOUD'}
+                ].map(t => (
+                  <button key={t.id} onClick={() => setActiveTab(t.id as any)} className={`flex-1 py-5 rounded-[24px] text-xs font-black transition-all ${activeTab === t.id ? 'bg-slate-950 text-white shadow-2xl scale-110' : 'text-slate-700 hover:text-slate-950'}`}>{t.label}</button>
+                ))}
+              </div>
+
+              {activeTab !== 'compare' ? (
+                <div className="space-y-20 pb-32">
+                  {CATEGORIES.map((cat, idx) => {
+                    let offset = CATEGORIES.slice(0, idx).reduce((a, b) => a + b.questionsCount, 0);
+                    return (
+                      <div key={cat.name} className="space-y-10">
+                        <div className="flex items-center gap-6 px-4">
+                          <div className="w-4 h-12 rounded-full shadow-md" style={{backgroundColor: cat.color}}></div>
+                          <h3 className="text-xl font-black uppercase tracking-[0.6em] text-slate-950">{cat.name} System</h3>
+                        </div>
+                        <div className="bg-white rounded-[60px] border-8 border-slate-950 p-10 md:p-20 space-y-20 shadow-2xl relative overflow-hidden">
+                          {QUESTIONS.slice(offset, offset + cat.questionsCount).map((q, i) => {
+                            const qIdx = offset + i + 1;
+                            const current = (activeTab === 'pre' ? preRatings : postRatings)[qIdx];
+                            return (
+                              <div key={qIdx} className="space-y-12 border-b-4 border-slate-50 pb-16 last:border-0">
+                                <div className="flex gap-8">
+                                  <span className="text-slate-950 font-black text-6xl italic leading-none opacity-20">{qIdx < 10 ? `0${qIdx}` : qIdx}</span>
+                                  <p className="font-black text-slate-950 text-2xl leading-relaxed mt-2">{q}</p>
+                                </div>
+                                <div className="grid grid-cols-5 gap-4">
+                                  {(['A', 'B', 'C', 'D', 'E'] as Rating[]).map(r => (
+                                    <button 
+                                      key={r} 
+                                      onClick={() => activeTab === 'pre' ? setPreRatings({...preRatings, [qIdx]: r}) : setPostRatings({...postRatings, [qIdx]: r})} 
+                                      className={`relative py-10 rounded-[36px] font-black text-4xl transition-all active:scale-90 ${current === r ? 'bg-slate-950 text-white shadow-2xl -translate-y-4 ring-[12px] ring-slate-100 scale-105' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-950 border-4 border-transparent'}`}
+                                    >
+                                      {r}
+                                      {current === r && <div className="absolute -top-4 -right-4 w-10 h-10 bg-indigo-600 rounded-full border-4 border-white shadow-xl flex items-center justify-center"><CheckCircle2 size={20}/></div>}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="space-y-16 pb-32">
+                   <div className="bg-white rounded-[80px] p-16 md:p-24 border-[12px] border-slate-950 shadow-2xl text-center space-y-16">
+                      <div className="space-y-4">
+                        <h3 className="text-7xl font-black italic uppercase tracking-tighter text-slate-950 leading-none">Growth Output</h3>
+                        <p className="text-sm font-black text-slate-700 uppercase tracking-[0.6em]">Real-time Database Visualization</p>
+                      </div>
+                      <div className="flex justify-center bg-slate-50 rounded-[80px] py-20 border-8 border-slate-100 shadow-inner scale-105">
+                        <RadarChart preScores={preScoresArr} postScores={postScoresArr} size={360} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-10 max-w-xl mx-auto">
+                        <div className="bg-white rounded-[48px] p-10 border-8 border-slate-200 shadow-xl">
+                          <p className="text-sm font-black text-slate-500 mb-4 tracking-widest uppercase">Pre-Test Total</p>
+                          <p className="text-7xl font-black italic text-slate-950 leading-none">{preScoresArr.reduce((a,b)=>a+b,0)}</p>
+                        </div>
+                        <div className="bg-slate-950 rounded-[48px] p-10 shadow-2xl scale-110 border-4 border-slate-800">
+                          <p className="text-sm font-black text-slate-400 mb-4 tracking-widest uppercase">Post-Test Total</p>
+                          <p className="text-7xl font-black italic text-white leading-none">{postScoresArr.reduce((a,b)=>a+b,0)}</p>
+                        </div>
+                      </div>
+                   </div>
+
+                   <button 
+                    onClick={handleSubmit} disabled={isSubmitting || syncSuccess} 
+                    className={`w-full py-12 rounded-[60px] font-black text-4xl transition-all flex items-center justify-center gap-8 relative overflow-hidden group shadow-[0_60px_100px_-20px_rgba(0,0,0,0.5)] ${syncSuccess ? 'bg-emerald-600 text-white' : 'bg-slate-950 text-white hover:scale-[0.97] active:scale-95'}`}
+                  >
+                    {isSubmitting ? (
+                      <><Loader2 className="animate-spin" size={48}/><span className="tracking-[0.3em] uppercase italic">Syncing to Cloud...</span></>
+                    ) : syncSuccess ? (
+                      <><CheckCircle2 size={48}/><span className="tracking-[0.3em] uppercase italic">Records Synced!</span></>
+                    ) : (
+                      <><Save size={48} className="group-hover:rotate-12 transition-transform"/><span className="tracking-[0.3em] uppercase italic">Commit to Cloud Database</span></>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
-
-            {/* 问卷内容 */}
-            {activeTab !== 'compare' ? (
-              <div className="space-y-14 pb-24">
-                {CATEGORIES.map((cat, idx) => {
-                  let offset = CATEGORIES.slice(0, idx).reduce((a, b) => a + b.questionsCount, 0);
-                  return (
-                    <div key={cat.name} className="space-y-8">
-                      <div className="flex items-center gap-5 px-4">
-                        <div className="w-2 h-8 rounded-full shadow-sm" style={{backgroundColor: cat.color}}></div>
-                        <h3 className="text-sm font-black uppercase tracking-[0.5em] text-slate-800">{cat.name} Dimension</h3>
-                      </div>
-                      <div className="bg-white rounded-[44px] border-2 border-slate-200 p-8 sm:p-14 space-y-16 shadow-xl">
-                        {QUESTIONS.slice(offset, offset + cat.questionsCount).map((q, i) => {
-                          const qIdx = offset + i + 1;
-                          const current = (activeTab === 'pre' ? preRatings : postRatings)[qIdx];
-                          return (
-                            <div key={qIdx} className="space-y-10 group">
-                              <div className="flex gap-6">
-                                <span className="text-slate-900 font-black text-3xl italic leading-none">{qIdx < 10 ? `0${qIdx}` : qIdx}</span>
-                                <p className="font-black text-slate-800 text-lg leading-relaxed">{q}</p>
-                              </div>
-                              <div className="grid grid-cols-5 gap-4">
-                                {(['A', 'B', 'C', 'D', 'E'] as Rating[]).map(r => (
-                                  <button 
-                                    key={r} 
-                                    onClick={() => activeTab === 'pre' ? setPreRatings({...preRatings, [qIdx]: r}) : setPostRatings({...postRatings, [qIdx]: r})} 
-                                    className={`relative py-6 rounded-[24px] font-black text-lg transition-all active:scale-90 ${current === r ? 'bg-slate-900 text-white shadow-2xl -translate-y-2 ring-8 ring-slate-100' : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900 border-2 border-transparent'}`}
-                                  >
-                                    {r}
-                                    {current === r && <div className="absolute -top-2 -right-2 w-5 h-5 bg-indigo-500 rounded-full border-4 border-white shadow-md"></div>}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="space-y-12 pb-32 animate-in slide-in-from-bottom-12 duration-500">
-                <div className="bg-white rounded-[64px] p-12 sm:p-20 border-4 border-slate-900 shadow-2xl text-center space-y-14 relative overflow-hidden">
-                   <div className="absolute top-0 left-0 w-full h-2 bg-slate-900"></div>
-                   <div className="space-y-3">
-                      <h3 className="text-5xl font-black italic uppercase tracking-tighter text-slate-900 leading-none">Self-Growth Report</h3>
-                      <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.4em]">Database Visualization Output</p>
-                   </div>
-                   <div className="flex justify-center bg-slate-50 rounded-[64px] py-16 border-2 border-slate-100 shadow-inner">
-                      <RadarChart preScores={preScoresArr} postScores={postScoresArr} size={320} />
-                   </div>
-                   <div className="grid grid-cols-2 gap-8 max-w-md mx-auto">
-                      <div className="bg-white rounded-[32px] p-8 border-2 border-slate-100 shadow-lg">
-                        <p className="text-[11px] font-black text-slate-400 mb-2 tracking-widest uppercase">Pre-Total</p>
-                        <p className="text-4xl font-black italic text-slate-900 leading-none">{preScoresArr.reduce((a,b)=>a+b,0)}</p>
-                      </div>
-                      <div className="bg-slate-900 rounded-[32px] p-8 shadow-2xl scale-110">
-                        <p className="text-[11px] font-black text-slate-400 mb-2 tracking-widest uppercase">Post-Total</p>
-                        <p className="text-4xl font-black italic text-white leading-none">{postScoresArr.reduce((a,b)=>a+b,0)}</p>
-                      </div>
-                   </div>
-                </div>
-
-                <div className="bg-indigo-950 rounded-[40px] p-10 flex items-start gap-8 shadow-2xl text-white">
-                  <AlertCircle className="text-indigo-400 shrink-0 mt-1" size={32}/>
-                  <div className="space-y-3">
-                    <h4 className="text-lg font-black uppercase tracking-widest">Database Sync Protocol</h4>
-                    <p className="text-sm font-bold text-indigo-100/70 leading-relaxed">点击下方按钮将评分数据加密同步至教师控制台。一旦同步成功，您的成长曲线将实时更新在教师端的数据库仪表盘中。</p>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={handleSubmit} disabled={isSubmitting || syncSuccess} 
-                  className={`w-full py-10 rounded-[48px] font-black text-2xl transition-all flex items-center justify-center gap-6 relative overflow-hidden group shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] ${syncSuccess ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-white hover:scale-[0.98] active:scale-95'}`}
-                >
-                  {isSubmitting ? (
-                    <><Loader2 className="animate-spin" size={32}/><span className="tracking-[0.2em] uppercase italic">Syncing to Cloud...</span></>
-                  ) : syncSuccess ? (
-                    <><CheckCircle2 size={32}/><span className="tracking-[0.2em] uppercase italic">Data Synced Successfully!</span></>
-                  ) : (
-                    <><Save size={32} className="group-hover:rotate-12 transition-transform"/><span className="tracking-[0.2em] uppercase italic">Commit to Cloud DB</span></>
-                  )}
-                </button>
-              </div>
-            )}
           </div>
         ) : (
-          /* 教师端：高对比度列表页 */
-          <div className="space-y-12 animate-in fade-in duration-500 pb-20">
-            <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-10 px-4">
-              <div className="space-y-4">
-                <h2 className="text-7xl sm:text-9xl font-black tracking-tighter italic uppercase leading-none text-slate-900">Console</h2>
-                <div className="flex items-center gap-4">
-                  <div className="px-4 py-1.5 bg-slate-900 text-white rounded-full text-[11px] font-black uppercase tracking-[0.3em] shadow-lg animate-pulse">Live DB Monitoring</div>
-                  <p className="text-slate-600 text-[11px] font-bold uppercase tracking-[0.2em]">Updated {new Date().toLocaleTimeString()}</p>
+          /* 教师管理列表 */
+          <div className="space-y-16 pb-32">
+             <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-12 px-6">
+              <div className="space-y-6">
+                <h2 className="text-9xl sm:text-[13rem] font-black tracking-tighter italic uppercase leading-none text-slate-950">Vault</h2>
+                <div className="flex items-center gap-6">
+                  <div className="px-8 py-3 bg-slate-950 text-white rounded-2xl text-sm font-black uppercase tracking-[0.4em] shadow-2xl animate-pulse ring-8 ring-slate-100">Encrypted Cloud Storage</div>
+                  <p className="text-slate-950 text-sm font-black uppercase tracking-[0.3em] italic">Updated: {new Date().toLocaleTimeString()}</p>
                 </div>
               </div>
               
-              <div className="flex flex-col sm:flex-row flex-wrap gap-5">
-                <div className="relative flex-1 sm:flex-none">
-                  <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-900" size={20}/>
+              <div className="flex flex-col sm:flex-row flex-wrap gap-6 items-center">
+                <div className="relative w-full sm:w-96">
+                  <Search className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-950" size={28}/>
                   <input 
-                    type="text" placeholder="Search by Name or Student ID..." value={searchQuery} 
+                    type="text" placeholder="Search Identity..." value={searchQuery} 
                     onChange={e => setSearchQuery(e.target.value)} 
-                    className="pl-16 pr-8 py-5 bg-white border-4 border-slate-200 rounded-[28px] text-sm font-black w-full sm:w-80 focus:ring-8 focus:ring-slate-100 transition-all outline-none focus:border-slate-900 shadow-xl placeholder:text-slate-300 text-slate-900" 
+                    className="pl-20 pr-10 py-8 bg-white border-8 border-slate-950 rounded-[40px] text-xl font-black w-full focus:ring-[16px] focus:ring-slate-100 transition-all outline-none shadow-2xl text-slate-950 placeholder:text-slate-300" 
                   />
                 </div>
-                <div className="flex bg-white p-2 border-4 border-slate-200 rounded-[28px] shadow-xl">
-                   <div className="px-5 flex items-center gap-3 text-slate-900 border-r-2 border-slate-100"><Filter size={18}/></div>
-                   <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)} className="bg-transparent text-xs font-black py-2 pl-6 pr-10 outline-none appearance-none cursor-pointer text-slate-900 uppercase">
-                     <option value="All">All Classes</option>
-                     {Array.from(new Set(records.map(r => r.className))).map(c => <option key={c} value={c}>{c}</option>)}
-                   </select>
-                </div>
-                <button onClick={loadRecords} disabled={isFetching} className="p-5 bg-slate-900 text-white rounded-[28px] shadow-2xl hover:scale-110 active:scale-95 transition-all">
-                  <RefreshCw size={24} className={isFetching ? 'animate-spin' : ''}/>
+                <button onClick={loadRecords} disabled={isFetching} className="p-8 bg-slate-950 text-white rounded-[40px] shadow-2xl hover:scale-110 active:scale-90 transition-all border-4 border-slate-800">
+                  <RefreshCw size={36} className={isFetching ? 'animate-spin' : ''}/>
                 </button>
               </div>
             </div>
 
-            {/* 列表数据 (深度着色提升可见性) */}
-            <div className="bg-white rounded-[56px] border-4 border-slate-900 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] overflow-hidden">
+            <div className="bg-white rounded-[80px] border-[12px] border-slate-950 shadow-[0_80px_160px_-40px_rgba(0,0,0,0.3)] overflow-hidden">
                <div className="overflow-x-auto">
-                 <table className="w-full text-left border-collapse min-w-[800px]">
+                 <table className="w-full text-left border-collapse min-w-[1000px]">
                    <thead>
-                     <tr className="bg-slate-900 text-[12px] font-black text-white uppercase tracking-widest">
-                       <th className="px-12 py-8">Student Detail</th>
-                       <th className="px-8 py-8 text-center">Pre Test</th>
-                       <th className="px-8 py-8 text-center">Post Test</th>
-                       <th className="px-8 py-8 text-center">Net Gain</th>
-                       <th className="px-12 py-8 text-right italic">Action</th>
+                     <tr className="bg-slate-950 text-[14px] font-black text-white uppercase tracking-[0.4em]">
+                       <th className="px-16 py-12">Member Data</th>
+                       <th className="px-10 py-12 text-center">Pre</th>
+                       <th className="px-10 py-12 text-center">Post</th>
+                       <th className="px-10 py-12 text-center">Gain</th>
+                       <th className="px-16 py-12 text-right">Access</th>
                      </tr>
                    </thead>
-                   <tbody className="divide-y-4 divide-slate-50">
+                   <tbody className="divide-y-8 divide-slate-50">
                      {isFetching ? (
-                        <tr><td colSpan={5} className="py-48 text-center"><Loader2 className="animate-spin mx-auto text-slate-900" size={64}/></td></tr>
+                        <tr><td colSpan={5} className="py-80 text-center"><Loader2 className="animate-spin mx-auto text-slate-950" size={100}/></td></tr>
                      ) : filteredRecords.length === 0 ? (
-                        <tr><td colSpan={5} className="py-64 text-center text-slate-300 font-black italic uppercase tracking-widest text-4xl">No Cloud Records Found</td></tr>
+                        <tr><td colSpan={5} className="py-96 text-center text-slate-950 font-black italic uppercase tracking-widest text-6xl opacity-10">No Records Found</td></tr>
                      ) : (
                         filteredRecords.map(r => (
-                          <tr key={r.id} className="hover:bg-indigo-50/50 transition-all group cursor-pointer" onClick={() => setDetailStudent(r)}>
-                            <td className="px-12 py-10">
-                              <div className="flex items-center gap-6">
-                                <div className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-lg transition-transform group-hover:rotate-12">{r.name.charAt(0)}</div>
-                                <div className="space-y-1">
-                                  <span className="font-black text-2xl text-slate-900 block tracking-tighter uppercase group-hover:text-indigo-700 transition-colors">{r.name}</span>
-                                  <div className="flex gap-2">
-                                    <span className="text-[10px] font-black bg-slate-100 text-slate-700 px-2 py-0.5 rounded uppercase">ID: {r.studentId}</span>
-                                    <span className="text-[10px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded uppercase">{r.className}</span>
+                          <tr key={r.id} className="hover:bg-indigo-50 transition-all group cursor-pointer" onClick={() => setDetailStudent(r)}>
+                            <td className="px-16 py-16">
+                              <div className="flex items-center gap-10">
+                                <div className="w-24 h-24 bg-slate-950 text-white rounded-3xl flex items-center justify-center font-black text-4xl shadow-2xl transition-all group-hover:rotate-12 group-hover:scale-110">{r.name.charAt(0)}</div>
+                                <div className="space-y-4">
+                                  {/* 这里确保名字极黑且巨大 */}
+                                  <span className="font-black text-5xl text-slate-950 block tracking-tighter uppercase leading-none group-hover:text-indigo-900 transition-colors">{r.name}</span>
+                                  <div className="flex gap-4">
+                                    <span className="text-[14px] font-black bg-slate-950 text-white px-5 py-2 rounded-xl uppercase shadow-md">ID: {r.studentId}</span>
+                                    <span className="text-[14px] font-black bg-indigo-700 text-white px-5 py-2 rounded-xl uppercase shadow-md">{r.className}</span>
                                   </div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-8 py-10 font-black text-2xl text-slate-600 text-center">{r.preScore}</td>
-                            <td className="px-8 py-10 font-black text-3xl italic text-center text-slate-900">{r.postScore}</td>
-                            <td className="px-8 py-10 text-center">
-                               <div className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black shadow-sm ${r.postScore - r.preScore >= 0 ? 'bg-emerald-100 text-emerald-800 ring-2 ring-emerald-200' : 'bg-rose-100 text-rose-800 ring-2 ring-rose-200'}`}>
-                                 {r.postScore - r.preScore >= 0 ? <ArrowUpRight size={16}/> : null}
+                            <td className="px-10 py-16 font-black text-4xl text-slate-900 text-center">{r.preScore}</td>
+                            <td className="px-10 py-16 font-black text-6xl italic text-center text-slate-950 bg-slate-50/80">{r.postScore}</td>
+                            <td className="px-10 py-16 text-center">
+                               <div className={`inline-flex items-center gap-4 px-10 py-6 rounded-[32px] text-2xl font-black shadow-2xl border-4 ${r.postScore - r.preScore >= 0 ? 'bg-emerald-100 text-emerald-950 border-emerald-400' : 'bg-rose-100 text-rose-950 border-rose-400'}`}>
+                                 {r.postScore - r.preScore >= 0 ? <ArrowUpRight size={28}/> : null}
                                  {r.postScore - r.preScore}
                                </div>
                             </td>
-                            <td className="px-12 py-10 text-right">
-                              <div className="w-16 h-16 bg-slate-100 rounded-3xl inline-flex items-center justify-center text-slate-900 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-md group-hover:scale-110 border-2 border-transparent group-hover:border-slate-800">
-                                <ChevronRight size={28}/>
+                            <td className="px-16 py-16 text-right">
+                              <div className="w-24 h-24 bg-slate-100 rounded-[40px] inline-flex items-center justify-center text-slate-950 group-hover:bg-slate-950 group-hover:text-white transition-all shadow-2xl group-hover:scale-110 border-8 border-slate-950">
+                                <ChevronRight size={48}/>
                               </div>
                             </td>
                           </tr>
