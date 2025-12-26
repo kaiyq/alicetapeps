@@ -7,33 +7,24 @@ import {
   Lock, 
   CheckCircle2, 
   Loader2, 
-  Search, 
-  ChevronRight, 
-  ChevronDown,
   X, 
   Save, 
   User, 
   LogOut,
-  ArrowRight,
-  LayoutDashboard,
-  Zap,
   ArrowUpRight,
   ArrowDownRight,
   Minus,
   RotateCcw,
   Sparkles,
   Layers,
-  Users,
-  AlertCircle,
   ClipboardCheck,
-  Calendar,
   Info,
   Bug,
-  Tags
+  Zap
 } from 'lucide-react';
 
 // ============================================================
-// 🎯 Core Configuration
+// 🎯 核心配置 (Core Configuration)
 // ============================================================
 const DEFAULT_CONFIG = {
   apiKey: "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", 
@@ -44,7 +35,7 @@ const DEFAULT_CONFIG = {
 const TEACHER_PASSWORD = "0209";
 
 // ============================================================
-// 📊 Dimensions & Questions
+// 📊 维度与题目配置 (Dimensions & Questions)
 // ============================================================
 type Rating = 'A' | 'B' | 'C' | 'D' | 'E';
 const RATING_MAP: Record<Rating, number> = { 'A': 4, 'B': 3, 'C': 2, 'D': 1, 'E': 0 };
@@ -82,7 +73,7 @@ const QUESTIONS = [
 const TOTAL_QUESTIONS = 20;
 
 // ============================================================
-// 🚀 Notion Service (Multi-select Support)
+// 🚀 Notion 服务逻辑 (Notion Service)
 // ============================================================
 class NotionService {
   static getHeaders() { 
@@ -97,9 +88,12 @@ class NotionService {
     return `${DEFAULT_CONFIG.proxyUrl.replace(/\/$/, '')}/v1/`; 
   }
 
+  /**
+   * 同步记录到 Notion
+   * 已移除 Improvement 字段以匹配用户数据库结构
+   */
   static async syncRecord(record: any) {
     try {
-      // 处理多选标签：将逗号分隔的字符串转换为 Notion 的 multi_select 数组格式
       const classTags = (record.className || "")
         .split(/[,，]/)
         .map((s: string) => s.trim())
@@ -111,11 +105,10 @@ class NotionService {
         properties: {
           "Name": { "title": [{ "text": { "content": String(record.name || "Anonymous") } }] },
           "StudentID": { "rich_text": [{ "text": { "content": String(record.studentId || "-") } }] },
-          // 关键修改：使用 multi_select 格式
           "Class": { "multi_select": classTags },
           "PreScore": { "number": Number(record.preScore) || 0 },
           "PostScore": { "number": Number(record.postScore) || 0 },
-          "Improvement": { "number": Number(record.postScore - record.preScore) || 0 },
+          // 8个维度分字段
           "Pre_Content": { "number": Number(record.preScores[0]) || 0 },
           "Pre_Delivery": { "number": Number(record.preScores[1]) || 0 },
           "Pre_Language": { "number": Number(record.preScores[2]) || 0 },
@@ -138,18 +131,22 @@ class NotionService {
       if (res.ok) {
         return { success: true };
       } else {
-        console.error("Notion Error Detail:", data);
-        let errorMsg = data.message || "Unknown Notion Error";
-        if (data.code === 'validation_error') {
-          errorMsg = `Schema Mismatch: ${data.message} (请检查 Notion 表头 "Class" 必须是 Multi-select 类型)`;
+        console.error("Notion API Error:", data);
+        let msg = data.message || "同步失败";
+        // 针对 400 错误的详细引导
+        if (res.status === 400) {
+          msg = `配置错误(400): 请检查 Notion 数据库属性名称是否完全正确（无 Improvement 字段）。`;
         }
-        return { success: false, message: errorMsg };
+        return { success: false, message: msg };
       }
     } catch (e: any) { 
-      return { success: false, message: "Network error: " + e.message }; 
+      return { success: false, message: "网络异常: " + e.message }; 
     }
   }
 
+  /**
+   * 获取所有记录并组装维度数据
+   */
   static async fetchRecords(): Promise<any[]> {
     try {
       const res = await fetch(`${this.getBaseUrl()}databases/${DEFAULT_CONFIG.dbId}/query`, { 
@@ -165,19 +162,28 @@ class NotionService {
           if (prop.type === 'title') return prop.title?.[0]?.plain_text || '';
           if (prop.type === 'rich_text') return prop.rich_text?.[0]?.plain_text || '';
           if (prop.type === 'number') return prop.number ?? 0;
-          // 适配多选读取
           if (prop.type === 'multi_select') return prop.multi_select?.map((v: any) => v.name).join(', ') || '';
           return null;
         };
         return {
           id: page.id,
-          name: getVal("Name") || 'Unamed',
+          name: getVal("Name") || 'Unnamed',
           studentId: getVal("StudentID") || '-',
           className: getVal("Class") || 'None',
           preScore: getVal("PreScore") ?? 0,
           postScore: getVal("PostScore") ?? 0,
-          preSubScores: [getVal("Pre_Content") ?? 0, getVal("Pre_Delivery") ?? 0, getVal("Pre_Language") ?? 0, getVal("Pre_Logic") ?? 0],
-          postSubScores: [getVal("Post_Content") ?? 0, getVal("Post_Delivery") ?? 0, getVal("Post_Language") ?? 0, getVal("Post_Logic") ?? 0],
+          preSubScores: [
+            getVal("Pre_Content") ?? 0, 
+            getVal("Pre_Delivery") ?? 0, 
+            getVal("Pre_Language") ?? 0, 
+            getVal("Pre_Logic") ?? 0
+          ],
+          postSubScores: [
+            getVal("Post_Content") ?? 0, 
+            getVal("Post_Delivery") ?? 0, 
+            getVal("Post_Language") ?? 0, 
+            getVal("Post_Logic") ?? 0
+          ],
           createdTime: page.created_time
         };
       });
@@ -195,7 +201,7 @@ class NotionService {
 }
 
 // ============================================================
-// 🎨 Radar Chart & Panels
+// 🎨 雷达图与分析面板 (UI Components)
 // ============================================================
 const RadarChart: React.FC<{ preScores: number[], postScores: number[], size?: number }> = ({ preScores, postScores, size = 300 }) => {
   const center = size / 2;
@@ -257,7 +263,7 @@ const ImprovementPanel: React.FC<{ pre: number[], post: number[] }> = ({ pre, po
   <div className="space-y-4 pt-6 text-left">
     <div className="flex items-center gap-2 mb-2 px-1">
       <Sparkles size={16} className="text-indigo-500 fill-indigo-500"/>
-      <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 italic">Dimension Analysis / 提升维度</span>
+      <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 italic">Dimension Analysis / 维度分析</span>
     </div>
     <div className="grid gap-3">
       {CATEGORIES.map((cat, i) => {
@@ -267,8 +273,8 @@ const ImprovementPanel: React.FC<{ pre: number[], post: number[] }> = ({ pre, po
         const max = cat.questionsCount * 4;
         const percent = (postVal / max) * 100;
         return (
-          <div key={cat.name} className="relative bg-white p-5 rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: cat.color }}></div>
+          <div key={cat.name} className="relative bg-white p-5 rounded-3xl border border-slate-100 shadow-sm overflow-hidden transition-all hover:shadow-md">
+            <div className="absolute top-0 left-0 w-1.5 h-full" style={{ backgroundColor: cat.color }}></div>
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
@@ -292,7 +298,7 @@ const ImprovementPanel: React.FC<{ pre: number[], post: number[] }> = ({ pre, po
 );
 
 // ============================================================
-// 📱 Main Application
+// 📱 主应用入口 (Main Application)
 // ============================================================
 const App: React.FC = () => {
   const [view, setView] = useState<'student' | 'teacher'>(() => (localStorage.getItem('tapeps_auth') ? 'teacher' : 'student'));
@@ -307,8 +313,6 @@ const App: React.FC = () => {
   const [lastError, setLastError] = useState<string | null>(null);
   
   const [teacherViewMode, setTeacherViewMode] = useState<'all' | 'class'>('class');
-  const [selectedClassFilter, setSelectedClassFilter] = useState<string>('All Classes');
-  const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
 
   const [profile, setProfile] = useState(() => JSON.parse(localStorage.getItem('tapeps_profile') || '{"name":"","studentId":"","className":""}'));
   const [preRatings, setPreRatings] = useState<Record<number, Rating>>(() => JSON.parse(localStorage.getItem('tapeps_pre_ratings') || '{}'));
@@ -320,8 +324,6 @@ const App: React.FC = () => {
     setIsFetching(true);
     const data = await NotionService.fetchRecords();
     setRecords(data);
-    const classes = new Set(data.map(r => (r.className || 'None').split(/[,，]/)[0].trim()));
-    setExpandedClasses(classes);
     setIsFetching(false);
   }, []);
 
@@ -374,9 +376,6 @@ const App: React.FC = () => {
       r.studentId.toLowerCase().includes(s) || 
       r.className.toLowerCase().includes(s)
     );
-    if (selectedClassFilter !== 'All Classes') {
-      filtered = filtered.filter(r => (r.className || 'None').split(/[,，]/)[0].trim() === selectedClassFilter);
-    }
     if (teacherViewMode === 'all') return { 'Vault List': filtered };
     const groups: Record<string, any[]> = {};
     filtered.forEach(r => {
@@ -385,7 +384,7 @@ const App: React.FC = () => {
       groups[cls].push(r);
     });
     return groups;
-  }, [records, search, teacherViewMode, selectedClassFilter]);
+  }, [records, search, teacherViewMode]);
 
   return (
     <div className="min-h-screen bg-[#F8F9FD] text-slate-900 font-sans pb-20 select-none">
@@ -394,58 +393,50 @@ const App: React.FC = () => {
           <div className="bg-indigo-600 p-2 rounded-2xl text-white shadow-lg shadow-indigo-200"><TrendingUp size={20}/></div>
           <div>
             <span className="font-black text-2xl italic tracking-tighter uppercase leading-none block">TAPEPS</span>
-            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Intelligent Evaluation System</span>
+            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Student Evaluation</span>
           </div>
         </div>
         <div className="flex bg-slate-100/80 p-1 rounded-2xl border border-slate-200/50">
-          <button onClick={() => setView('student')} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all ${view === 'student' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Portal</button>
-          <button onClick={() => isTeacherAuth ? setView('teacher') : setShowPwd(true)} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all flex items-center gap-2 ${view === 'teacher' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}><Lock size={12}/> Admin</button>
+          <button onClick={() => setView('student')} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all ${view === 'student' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>Portal</button>
+          <button onClick={() => isTeacherAuth ? setView('teacher') : setShowPwd(true)} className={`px-5 py-2 rounded-xl text-[11px] font-black transition-all flex items-center gap-2 ${view === 'teacher' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}><Lock size={12}/> Admin</button>
         </div>
       </nav>
 
       {showPwd && (
         <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6">
-          <div className="bg-white rounded-[40px] p-10 w-full max-w-[360px] shadow-2xl text-center">
+          <div className="bg-white rounded-[40px] p-10 w-full max-w-[360px] shadow-2xl text-center animate-in">
             <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6"><Lock size={32}/></div>
-            <h3 className="font-black mb-1 text-xl tracking-tight">Admin Access</h3>
-            <p className="text-slate-400 text-[10px] font-bold mb-8 uppercase tracking-widest">Enter Credentials</p>
+            <h3 className="font-black mb-1 text-xl tracking-tight">Access Control</h3>
             <input type="password" autoFocus value={pwdIn} onChange={e => setPwdIn(e.target.value)} onKeyDown={e => e.key === 'Enter' && (pwdIn === TEACHER_PASSWORD ? (setIsTeacherAuth(true), localStorage.setItem('tapeps_auth','true'), setShowPwd(false), setView('teacher')) : alert("Password Error"))} className="w-full text-center text-3xl py-5 bg-slate-50 rounded-3xl mb-8 border-2 border-slate-100 outline-none font-mono focus:border-indigo-600 transition-all placeholder:text-slate-200" placeholder="••••"/>
-            <button onClick={() => (pwdIn === TEACHER_PASSWORD ? (setIsTeacherAuth(true), localStorage.setItem('tapeps_auth','true'), setShowPwd(false), setView('teacher')) : alert("Password Error"))} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl">Verify</button>
-            <button onClick={() => setShowPwd(false)} className="w-full mt-4 py-2 text-[10px] font-black uppercase text-slate-400">Cancel</button>
+            <button onClick={() => (pwdIn === TEACHER_PASSWORD ? (setIsTeacherAuth(true), localStorage.setItem('tapeps_auth','true'), setShowPwd(false), setView('teacher')) : alert("Password Error"))} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl">Confirm Identity</button>
+            <button onClick={() => setShowPwd(false)} className="w-full mt-4 py-2 text-[10px] font-black uppercase text-slate-400">Back</button>
           </div>
         </div>
       )}
 
       <main className="max-w-xl mx-auto px-5 mt-8">
         {view === 'student' ? (
-          <div className="space-y-8 pb-12">
+          <div className="space-y-8 pb-12 animate-in">
+            {/* 用户档案卡片 */}
             <div className="bg-white rounded-[32px] p-6 border border-slate-100 shadow-xl space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center"><User size={20}/></div>
                   <div>
-                    <h4 className="font-black text-[13px] uppercase tracking-wide leading-none mb-1">Student Profile</h4>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase italic">Sync Identification</p>
+                    <h4 className="font-black text-[13px] uppercase tracking-wide mb-1 leading-none">Profile</h4>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase italic">Identifier</p>
                   </div>
                 </div>
                 <button onClick={resetAssessment} className="text-[10px] font-black uppercase text-rose-500 bg-rose-50 px-4 py-2 rounded-2xl"><RotateCcw size={12}/></button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16}/>
-                  <input value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full bg-slate-50 pl-12 pr-4 py-4 rounded-2xl border-2 border-slate-50 text-[13px] font-bold focus:border-indigo-600/20 outline-none transition-all" placeholder="Full Name"/>
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16}/>
-                  <input value={profile.studentId} onChange={e => setProfile({...profile, studentId: e.target.value})} className="w-full bg-slate-50 pl-12 pr-4 py-4 rounded-2xl border-2 border-slate-50 text-[13px] font-bold focus:border-indigo-600/20 outline-none transition-all" placeholder="Student ID"/>
-                </div>
-                <div className="relative">
-                  <Tags className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16}/>
-                  <input value={profile.className} onChange={e => setProfile({...profile, className: e.target.value})} className="w-full bg-slate-50 pl-12 pr-4 py-4 rounded-2xl border-2 border-slate-50 text-[13px] font-bold focus:border-indigo-600/20 outline-none transition-all" placeholder="Class / 多选请用逗号"/>
-                </div>
+                <input value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full bg-slate-50 px-4 py-4 rounded-2xl border-2 border-slate-50 text-[13px] font-bold outline-none focus:border-indigo-600/20" placeholder="Name / 姓名"/>
+                <input value={profile.studentId} onChange={e => setProfile({...profile, studentId: e.target.value})} className="w-full bg-slate-50 px-4 py-4 rounded-2xl border-2 border-slate-50 text-[13px] font-bold outline-none focus:border-indigo-600/20" placeholder="ID / 学号"/>
+                <input value={profile.className} onChange={e => setProfile({...profile, className: e.target.value})} className="w-full bg-slate-50 px-4 py-4 rounded-2xl border-2 border-slate-50 text-[13px] font-bold outline-none focus:border-indigo-600/20" placeholder="Class / 班级"/>
               </div>
             </div>
 
+            {/* 导航标签 */}
             <div className="flex bg-slate-200/50 p-1.5 rounded-[24px] border border-slate-200/50 mx-auto w-fit shadow-inner">
               {[ {id:'pre', l:'Pre-Test'}, {id:'post', l:'Post-Test'}, {id:'compare', l:'Report'} ].map(t => (
                 <button key={t.id} onClick={() => {
@@ -457,12 +448,13 @@ const App: React.FC = () => {
               ))}
             </div>
 
+            {/* 测试内容 */}
             <div className="space-y-8">
               {activeTab !== 'compare' ? (
                 <>
-                  <div className={`flex items-center justify-between px-8 py-5 rounded-[32px] text-white transition-all transform ${((activeTab === 'pre' && isPreComplete) || (activeTab === 'post' && isPostComplete)) ? 'bg-emerald-600' : 'bg-slate-900'}`}>
+                  <div className={`flex items-center justify-between px-8 py-5 rounded-[32px] text-white transition-all ${((activeTab === 'pre' && isPreComplete) || (activeTab === 'post' && isPostComplete)) ? 'bg-emerald-600' : 'bg-slate-900'}`}>
                      <div>
-                       <span className="text-[10px] font-black uppercase opacity-60 tracking-widest block mb-1">Completion</span>
+                       <span className="text-[10px] font-black uppercase opacity-60 tracking-widest block mb-1">Process</span>
                        <span className="text-2xl font-black italic">{(activeTab === 'pre' ? preDoneCount : postDoneCount)} <span className="text-xs opacity-50">/ {TOTAL_QUESTIONS}</span></span>
                      </div>
                      <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md">
@@ -473,17 +465,15 @@ const App: React.FC = () => {
                   {CATEGORIES.map((cat, idx) => {
                     let offset = CATEGORIES.slice(0, idx).reduce((a, b) => a + b.questionsCount, 0);
                     return (
-                      <div key={cat.name} className="bg-white rounded-[40px] border border-slate-100 overflow-hidden shadow-xl animate-in">
-                        <div className="bg-slate-50/50 px-8 py-5 border-b border-slate-100 flex items-center justify-between">
-                          <div className="flex items-center gap-3"><div className="w-4 h-4 rounded-lg" style={{backgroundColor: cat.color}}></div><span className="text-[12px] font-black uppercase tracking-widest text-slate-800">{cat.name}</span></div>
-                        </div>
+                      <div key={cat.name} className="bg-white rounded-[40px] border border-slate-100 overflow-hidden shadow-xl">
+                        <div className="bg-slate-50/50 px-8 py-5 border-b border-slate-100 font-black text-[12px] uppercase tracking-widest">{cat.name}</div>
                         <div className="divide-y divide-slate-50">
                           {QUESTIONS.slice(offset, offset + cat.questionsCount).map((q, i) => {
                             const qIdx = offset + i + 1;
                             const current = (activeTab === 'pre' ? preRatings : postRatings)[qIdx];
                             return (
-                              <div key={qIdx} className="p-8 space-y-6 hover:bg-slate-50/20 transition-colors">
-                                <p className="text-[16px] font-bold text-slate-900 leading-snug"><span className="text-indigo-400 mr-2 italic">{qIdx}.</span> {q}</p>
+                              <div key={qIdx} className="p-8 space-y-6">
+                                <p className="text-[16px] font-bold text-slate-900 leading-snug">{qIdx}. {q}</p>
                                 <div className="flex gap-2">
                                   {(['A','B','C','D','E'] as Rating[]).map(r => (
                                     <button key={r} onClick={() => activeTab === 'pre' ? setPreRatings({...preRatings, [qIdx]: r}) : setPostRatings({...postRatings, [qIdx]: r})} 
@@ -497,64 +487,46 @@ const App: React.FC = () => {
                       </div>
                     );
                   })}
-                  <div className="pt-8 pb-12">
-                    {activeTab === 'pre' ? (
-                      <button onClick={() => { if(isPreComplete) { setActiveTab('post'); window.scrollTo(0,0); } }} className={`w-full py-6 rounded-[32px] font-black text-lg ${isPreComplete ? 'bg-indigo-600 text-white shadow-2xl' : 'bg-slate-100 text-slate-300'}`}>Start Post-Test</button>
-                    ) : (
-                      <button onClick={() => { if(isPostComplete) { setActiveTab('compare'); window.scrollTo(0,0); } }} className={`w-full py-6 rounded-[32px] font-black text-lg ${isPostComplete ? 'bg-indigo-600 text-white shadow-2xl' : 'bg-slate-100 text-slate-300'}`}>Generate Final Report</button>
-                    )}
-                  </div>
                 </>
               ) : (
                 <div className="space-y-8 animate-in">
                   <div className="bg-white rounded-[48px] p-10 border border-slate-100 shadow-2xl text-center space-y-12">
                     <RadarChart preScores={preScoresArr} postScores={postScoresArr} size={320} />
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="bg-slate-50 p-8 rounded-[40px] text-left">
-                        <p className="text-[10px] font-black uppercase text-slate-400 mb-1 italic">PRE-TEST</p>
-                        <p className="text-4xl font-black italic text-slate-800">{preTotal}</p>
-                      </div>
-                      <div className="bg-indigo-600 p-8 rounded-[40px] text-right text-white">
-                        <p className="text-[10px] font-black uppercase text-white/60 mb-1 italic">POST-TEST</p>
-                        <p className="text-4xl font-black italic">{postTotal}</p>
-                      </div>
-                    </div>
                     <ImprovementPanel pre={preScoresArr} post={postScoresArr} />
                   </div>
 
                   <div className="space-y-4">
                     {lastError && (
-                      <div className="bg-rose-50 border border-rose-100 p-6 rounded-[32px] animate-in">
-                        <div className="flex items-center gap-3 text-rose-600 mb-2">
-                          <Bug size={18}/>
-                          <span className="font-black text-sm uppercase italic">Notion Schema Error</span>
-                        </div>
-                        <p className="text-[11px] text-rose-500 font-bold leading-relaxed">{lastError}</p>
-                        <div className="mt-4 pt-4 border-t border-rose-100">
-                          <p className="text-[10px] text-rose-400 uppercase font-black tracking-widest mb-2 flex items-center gap-1"><Info size={12}/> Troubleshooting</p>
-                          <ul className="text-[10px] text-rose-400 space-y-1 list-disc pl-4 italic">
-                            <li>请确认 Notion 的 <b>"Class"</b> 列类型已改为 <b>Multi-select</b> (多选)</li>
-                            <li>其他核心列名: <b>Name</b> (Title), <b>StudentID</b> (Text), <b>PreScore</b> (Number)</li>
-                          </ul>
+                      <div className="bg-rose-50 border border-rose-100 p-6 rounded-[32px]">
+                        <div className="flex items-center gap-3 text-rose-600 mb-2 font-black text-sm uppercase italic"><Bug size={18}/> Error Insight</div>
+                        <p className="text-[11px] text-rose-500 font-bold">{lastError}</p>
+                        <div className="mt-4 pt-4 border-t border-rose-100 text-[10px] text-rose-400 italic">
+                            确保 Notion 数据库中已有 13 个正确命名的字段。本版本不再同步 "Improvement" 字段。
                         </div>
                       </div>
                     )}
 
                     <button onClick={async () => {
-                      if(!profile.name || !profile.studentId) return alert("Please fill Name and ID.");
+                      if(!profile.name || !profile.studentId) return alert("Please fill Profile first.");
                       setSubmitting(true);
                       setLastError(null);
-                      const res = await NotionService.syncRecord({ ...profile, preScore: preTotal, postScore: postTotal, preScores: preScoresArr, postScores: postScoresArr });
+                      const res = await NotionService.syncRecord({ 
+                        ...profile, 
+                        preScore: preTotal, 
+                        postScore: postTotal, 
+                        preScores: preScoresArr, 
+                        postScores: postScoresArr 
+                      });
                       if(res.success) {
                         setSynced(true);
-                        alert("Successfully synced to Cloud Database!");
+                        alert("Data successfully archived to Cloud!");
                       } else {
                         setLastError(res.message);
                       }
                       setSubmitting(false);
-                    }} disabled={submitting || synced} className={`w-full py-6 rounded-[32px] font-black text-lg flex items-center justify-center gap-3 transition-all ${synced ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-900 text-white shadow-2xl'}`}>
+                    }} disabled={submitting || synced} className={`w-full py-6 rounded-[32px] font-black text-lg flex items-center justify-center gap-3 transition-all ${synced ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-900 text-white shadow-2xl hover:bg-slate-800'}`}>
                       {submitting ? <Loader2 size={24} className="animate-spin opacity-50"/> : synced ? <ClipboardCheck size={24}/> : <Save size={24}/>}
-                      {submitting ? "Processing Tags..." : synced ? "Archive Completed" : "Sync to Notion Database"}
+                      {submitting ? "Processing..." : synced ? "Archive Completed" : "Final Cloud Archive"}
                     </button>
                   </div>
                 </div>
@@ -564,60 +536,32 @@ const App: React.FC = () => {
         ) : (
           <div className="space-y-8 pb-20 animate-in">
             <div className="flex items-center justify-between px-2">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center"><LayoutDashboard size={24}/></div>
-                <h2 className="text-2xl font-black italic uppercase">Vault Data</h2>
-              </div>
-              <div className="flex gap-3">
-                <button onClick={handleRefresh} className="p-4 bg-white rounded-2xl shadow-sm active:scale-90 transition-all"><RefreshCw size={20} className={isFetching ? 'animate-spin' : ''}/></button>
-                <button onClick={() => { localStorage.removeItem('tapeps_auth'); setIsTeacherAuth(false); setView('student'); }} className="p-4 bg-rose-50 text-rose-600 rounded-2xl"><LogOut size={20}/></button>
-              </div>
+               <h2 className="text-2xl font-black italic uppercase tracking-tight">Records Vault</h2>
+               <div className="flex gap-2">
+                 <button onClick={handleRefresh} className="p-4 bg-white rounded-2xl shadow-sm hover:bg-slate-50 transition-all"><RefreshCw size={20} className={isFetching ? 'animate-spin' : ''}/></button>
+                 <button onClick={() => { localStorage.removeItem('tapeps_auth'); setIsTeacherAuth(false); setView('student'); }} className="p-4 bg-rose-50 text-rose-600 rounded-2xl"><LogOut size={20}/></button>
+               </div>
             </div>
-
-            <div className="bg-white p-5 rounded-[32px] shadow-xl space-y-4">
-              <div className="flex bg-slate-100/80 p-1.5 rounded-2xl">
-                <button onClick={() => setTeacherViewMode('class')} className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase ${teacherViewMode === 'class' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>Group by Class</button>
-                <button onClick={() => setTeacherViewMode('all')} className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase ${teacherViewMode === 'all' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>All Records</button>
-              </div>
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18}/>
-                <input type="text" placeholder="Search name or ID..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl text-[13px] font-bold outline-none focus:bg-white border-2 border-transparent focus:border-indigo-50 transition-all"/>
-              </div>
-            </div>
-
             <div className="space-y-6">
-              {(Object.entries(processedRecords) as [string, any[]][]).sort().map(([title, group]) => (
-                <div key={title} className="bg-white rounded-[40px] border border-slate-100 shadow-xl overflow-hidden">
-                  <div onClick={() => setExpandedClasses(p => { const n = new Set(p); n.has(title) ? n.delete(title) : n.add(title); return n; })} className="px-8 py-5 flex items-center justify-between bg-slate-50/50 cursor-pointer hover:bg-slate-100 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <Layers size={16} className="text-indigo-400"/>
-                      <span className="font-black text-[13px] uppercase italic text-slate-800">{title} ({group.length})</span>
-                    </div>
-                    {expandedClasses.has(title) ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
-                  </div>
-                  {expandedClasses.has(title) && (
-                    <div className="divide-y divide-slate-50">
+              {Object.entries(processedRecords).sort().map(([title, group]) => (
+                <div key={title} className="bg-white rounded-[32px] border border-slate-100 shadow-xl overflow-hidden">
+                   <div className="px-8 py-5 bg-slate-50/50 font-black text-[11px] uppercase tracking-widest italic border-b border-slate-100 flex items-center gap-2">
+                      <Layers size={14} className="text-indigo-400"/> {title} ({group.length})
+                   </div>
+                   <div className="divide-y divide-slate-50">
                       {group.map(r => (
-                        <div key={r.id} onClick={() => setDetail(r)} className="p-6 flex items-center justify-between hover:bg-slate-50 cursor-pointer transition-all">
-                          <div className="flex items-center gap-5">
-                            <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center font-black text-slate-400 italic">{r.name.charAt(0)}</div>
-                            <div>
-                                <h5 className="font-black text-[15px] leading-tight">{r.name}</h5>
-                                <div className="flex gap-1 mt-1">
-                                    {r.className.split(/[,，]/).map((tag: string, idx: number) => (
-                                        <span key={idx} className="text-[8px] bg-slate-100 text-slate-400 font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">{tag.trim()}</span>
-                                    ))}
-                                </div>
-                            </div>
-                          </div>
-                          <div className="bg-slate-50 px-4 py-2 rounded-2xl text-right group-hover:bg-white">
-                             <p className="text-xl font-black italic leading-none">{r.postScore}</p>
-                             <p className="text-[8px] font-black text-slate-300 uppercase mt-1">Total</p>
-                          </div>
+                        <div key={r.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-all cursor-pointer" onClick={() => setDetail(r)}>
+                           <div>
+                              <h5 className="font-black text-[15px] leading-tight">{r.name}</h5>
+                              <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{r.studentId}</p>
+                           </div>
+                           <div className="bg-indigo-50 px-4 py-2 rounded-2xl text-indigo-600 text-right min-w-[60px]">
+                              <p className="text-xl font-black italic leading-none">{r.postScore}</p>
+                              <p className="text-[8px] font-black opacity-40 uppercase mt-1">Total</p>
+                           </div>
                         </div>
                       ))}
-                    </div>
-                  )}
+                   </div>
                 </div>
               ))}
             </div>
@@ -629,26 +573,26 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xl flex items-center justify-center p-6 overflow-y-auto">
           <div className="bg-white rounded-[56px] w-full max-w-lg shadow-2xl relative p-10 space-y-8 my-auto animate-in">
             <button onClick={() => setDetail(null)} className="absolute top-8 right-8 w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-all"><X size={24}/></button>
-            <div className="flex items-center gap-6 border-b border-slate-50 pb-10">
-              <div className="w-16 h-16 bg-indigo-600 text-white rounded-[24px] flex items-center justify-center font-black text-3xl italic shadow-2xl shadow-indigo-200">{detail.name.charAt(0)}</div>
+            <div className="flex items-center gap-6 border-b border-slate-50 pb-8">
+              <div className="w-16 h-16 bg-indigo-600 text-white rounded-[24px] flex items-center justify-center font-black text-3xl italic shadow-xl shadow-indigo-100">{detail.name.charAt(0)}</div>
               <div>
                 <h3 className="font-black text-2xl leading-none mb-1">{detail.name}</h3>
-                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{detail.studentId}</p>
-                <div className="flex gap-1 mt-1">
-                    {detail.className.split(/[,，]/).map((tag: string, idx: number) => (
-                        <span key={idx} className="text-[8px] bg-indigo-50 text-indigo-400 font-black px-2 py-0.5 rounded-md uppercase">{tag.trim()}</span>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest italic">{detail.studentId}</p>
+                <div className="flex gap-1 mt-2">
+                    {(detail.className || "").split(/[,，]/).map((tag: string, i: number) => (
+                        <span key={i} className="text-[8px] font-black uppercase bg-indigo-50 text-indigo-400 px-2 py-0.5 rounded-md">{tag.trim()}</span>
                     ))}
                 </div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-50 p-6 rounded-[32px] text-center border border-slate-100"><p className="text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest italic">PRE</p><p className="text-3xl font-black italic">{detail.preScore}</p></div>
-              <div className="bg-indigo-50 p-6 rounded-[32px] text-center text-indigo-600 border border-indigo-100"><p className="text-[10px] font-black uppercase text-indigo-400 mb-1 tracking-widest italic">POST</p><p className="text-3xl font-black italic">{detail.postScore}</p></div>
+              <div className="bg-slate-50 p-6 rounded-[32px] text-center border border-slate-100"><p className="text-[10px] font-black uppercase text-slate-400 mb-1">PRE</p><p className="text-3xl font-black italic">{detail.preScore}</p></div>
+              <div className="bg-indigo-50 p-6 rounded-[32px] text-center text-indigo-600 border border-indigo-100"><p className="text-[10px] font-black uppercase text-indigo-400 mb-1">POST</p><p className="text-3xl font-black italic">{detail.postScore}</p></div>
             </div>
             <div className="flex justify-center py-4">
-                <RadarChart preScores={detail.preSubScores} postScores={detail.postSubScores} size={280} />
+              <RadarChart preScores={detail.preSubScores} postScores={detail.postSubScores} size={280} />
             </div>
-            <button onClick={() => { if(confirm("Permanently delete from Notion?")) NotionService.deleteRecord(detail.id).then(() => { setDetail(null); handleRefresh(); }); }} className="w-full py-5 text-rose-500 font-black text-[12px] uppercase border-2 border-rose-50 rounded-[28px] hover:bg-rose-50 transition-all">Archived Record Deletion</button>
+            <button onClick={() => { if(confirm("Permanently delete from Cloud?")) NotionService.deleteRecord(detail.id).then(() => { setDetail(null); handleRefresh(); }); }} className="w-full py-5 text-rose-500 font-black text-[12px] uppercase border-2 border-rose-50 rounded-[28px] hover:bg-rose-50 transition-all">Destroy Data Record</button>
           </div>
         </div>
       )}
