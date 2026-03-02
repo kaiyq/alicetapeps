@@ -13,7 +13,7 @@ export async function onRequest(context) {
   }
 
   const path = params.path ? params.path.join('/') : '';
-  const url = `https://api.notion.com/v1/${path}`;
+  const url = `https://api.notion.com/${path}`;
 
   const headers = new Headers();
   headers.set('Authorization', `Bearer ${env.NOTION_API_KEY}`);
