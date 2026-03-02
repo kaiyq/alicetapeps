@@ -29,9 +29,9 @@ import {
 // 🎯 核心配置 (Core Configuration)
 // ============================================================
 const DEFAULT_CONFIG = {
-  apiKey: import.meta.env.VITE_NOTION_API_KEY ?? "", 
-  dbId: "2d36f36bb31880cbbb70c43247b18de1", 
-  proxyUrl: "https://alicetapeps.icu" 
+  apiKey: "",
+  dbId: "2d36f36bb31880cbbb70c43247b18de1",
+  proxyUrl: "/api/notion"
 };
 
 const TEACHER_PASSWORD = "0209";
@@ -78,16 +78,14 @@ const TOTAL_QUESTIONS = 20;
 // 🚀 Notion 服务逻辑 (Notion Service)
 // ============================================================
 class NotionService {
-  static getHeaders() { 
-    return { 
-      "Authorization": `Bearer ${DEFAULT_CONFIG.apiKey}`, 
-      "Content-Type": "application/json", 
-      "Notion-Version": "2022-06-28" 
-    }; 
+  static getHeaders() {
+    return {
+      "Content-Type": "application/json"
+    };
   }
-  
-  static getBaseUrl() { 
-    return `${DEFAULT_CONFIG.proxyUrl.replace(/\/$/, '')}/v1/`; 
+
+  static getBaseUrl() {
+    return `${DEFAULT_CONFIG.proxyUrl}/v1/`;
   }
 
   /**
