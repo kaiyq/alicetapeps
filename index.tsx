@@ -27,7 +27,7 @@ import {
 // 🎯 核心配置 (Core Configuration)
 // ============================================================
 const DEFAULT_CONFIG = {
-  apiKey: "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", 
+  apiKey: import.meta.env.VITE_NOTION_API_KEY ?? "", 
   dbId: "2d36f36bb31880cbbb70c43247b18de1", 
   proxyUrl: "https://alicetapeps.icu" 
 };
